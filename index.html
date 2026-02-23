@@ -631,12 +631,15 @@
                 const data = await response.json();
 
                 if (data && data.elements) {
-                    return data.elements.map(element => {
+                    const seenNames = new Set();
+                    const spots = [];
+
+                    // Sort by rough distance first to ensure we pick the closest one for duplicates
+                    const rawSpots = data.elements.map(element => {
                         const tags = element.tags || {};
                         const typeName = tags.tourism || tags.historic || tags.industrial || tags.craft || "Tourist Spot";
                         const formattedType = typeName.charAt(0).toUpperCase() + typeName.slice(1).replace(/_/g, ' ');
 
-                        // Advanced name detection: combine brand, operator and name for specificity
                         const brand = tags.brand || tags.operator || "";
                         let finalName = tags.name || "";
 
@@ -648,8 +651,6 @@
 
                         const sLat = element.center ? element.center.lat : element.lat;
                         const sLng = element.center ? element.center.lon : element.lon;
-
-                        // Rough Euclidean distance for fallback sorting
                         const roughDist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2));
 
                         return {
@@ -662,6 +663,17 @@
                             distance_value: roughDist * 111320
                         };
                     });
+
+                    // Sort by distance and deduplicate
+                    rawSpots.sort((a, b) => a.distance_value - b.distance_value);
+
+                    for (const spot of rawSpots) {
+                        if (!seenNames.has(spot.name)) {
+                            seenNames.add(spot.name);
+                            spots.push(spot);
+                        }
+                    }
+                    return spots;
                 }
             } catch (error) {
                 console.error('Overpass error:', error);
