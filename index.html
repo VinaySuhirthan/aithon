@@ -5,8 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TouristSpot Finder</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #1a73e8;
@@ -21,11 +22,11 @@
             --text-tertiary: #9aa3b2;
             --border: #e8edf5;
             --border-light: #f2f4f8;
-            --shadow-xs: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
-            --shadow-sm: 0 4px 12px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.04);
-            --shadow-md: 0 8px 24px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.04);
-            --shadow-focus: 0 0 0 3px rgba(26,115,232,0.12);
-            --shadow-btn: 0 2px 8px rgba(26,115,232,0.22), 0 1px 3px rgba(26,115,232,0.12);
+            --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.07), 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-focus: 0 0 0 3px rgba(26, 115, 232, 0.12);
+            --shadow-btn: 0 2px 8px rgba(26, 115, 232, 0.22), 0 1px 3px rgba(26, 115, 232, 0.12);
             --radius-xl: 20px;
             --radius-lg: 16px;
             --radius-md: 12px;
@@ -80,7 +81,7 @@
             background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
             border-radius: 14px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 14px rgba(26,115,232,0.3);
+            box-shadow: 0 4px 14px rgba(26, 115, 232, 0.3);
         }
 
         .logo-mark svg {
@@ -129,7 +130,7 @@
 
         .search-container:focus-within {
             box-shadow: var(--shadow-md);
-            border-color: rgba(26,115,232,0.2);
+            border-color: rgba(26, 115, 232, 0.2);
         }
 
         .input-group {
@@ -187,6 +188,7 @@
             background: var(--surface-2);
             transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
             outline: none;
+            appearance: none;
             -webkit-appearance: none;
         }
 
@@ -273,7 +275,7 @@
 
         .btn-primary:active {
             background: var(--primary-hover);
-            box-shadow: 0 4px 16px rgba(26,115,232,0.28);
+            box-shadow: 0 4px 16px rgba(26, 115, 232, 0.28);
         }
 
         .btn-secondary {
@@ -371,7 +373,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* ─── SPOTS GRID ──────────────────────────────── */
@@ -395,7 +399,7 @@
         .spot-card:active {
             box-shadow: var(--shadow-md);
             transform: scale(0.99);
-            border-color: rgba(26,115,232,0.2);
+            border-color: rgba(26, 115, 232, 0.2);
         }
 
         .crowd-badge {
@@ -426,10 +430,25 @@
             width: 0%;
         }
 
-        .crowd-low  { background: #ecfdf5; color: #059669; }
-        .crowd-mod  { background: #fffbeb; color: #d97706; }
-        .crowd-high { background: #fef2f2; color: #dc2626; }
-        .crowd-unknown { background: var(--border-light); color: var(--text-tertiary); }
+        .crowd-low {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .crowd-mod {
+            background: #fffbeb;
+            color: #d97706;
+        }
+
+        .crowd-high {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .crowd-unknown {
+            background: var(--border-light);
+            color: var(--text-tertiary);
+        }
 
         .spot-card h3 {
             font-size: 1.05rem;
@@ -481,7 +500,9 @@
         }
 
         /* ─── UTILITY ─────────────────────────────────── */
-        .hidden { display: none !important; }
+        .hidden {
+            display: none !important;
+        }
 
         /* ─── FOOTER ──────────────────────────────────── */
         footer {
@@ -511,8 +532,14 @@
                 max-width: 460px;
                 padding: 0 24px;
             }
-            header { padding-top: 72px; }
-            header h1 { font-size: 2.2rem; }
+
+            header {
+                padding-top: 72px;
+            }
+
+            header h1 {
+                font-size: 2.2rem;
+            }
         }
     </style>
 </head>
@@ -522,7 +549,8 @@
         <header>
             <div class="logo-mark">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    <path
+                        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                 </svg>
             </div>
             <h1><span class="brand">TouristSpot</span> Finder</h1>
@@ -535,7 +563,10 @@
                     <label for="from-input">Starting from</label>
                     <div class="input-wrapper">
                         <span class="input-icon">
-                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="3" />
+                                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                            </svg>
                         </span>
                         <input type="text" id="from-input" placeholder="Current location or city..."
                             aria-label="Starting location" autocomplete="off">
@@ -553,7 +584,10 @@
                     <label for="to-input">Going to</label>
                     <div class="input-wrapper">
                         <span class="input-icon">
-                            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <svg viewBox="0 0 24 24">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                                <circle cx="12" cy="10" r="3" />
+                            </svg>
                         </span>
                         <input type="text" id="to-input" placeholder="Where do you want to explore?"
                             aria-label="Destination location" autocomplete="off">
@@ -655,6 +689,10 @@
                 const fromCoords = await getCoordinates(fromVal);
                 const toCoords = await getCoordinates(toVal);
 
+                if (!fromCoords || !toCoords) {
+                    throw new Error('Could not find one or both locations. Please try more specific names.');
+                }
+
                 // Redirect to list page with parameters
                 const params = new URLSearchParams({
                     fLat: fromCoords.lat,
@@ -664,14 +702,10 @@
                     fName: fromVal,
                     tName: toVal
                 });
-                // Use /list on Render (Flask route), list.html on Live Server (localhost:5500)
-                const isLiveServer = location.port === '5500';
-                const listPath = isLiveServer ? 'list.html' : '/list';
-                console.log("Redirecting to:", listPath);
-                window.location.href = `${listPath}?${params.toString()}`;
+                window.location.href = `/list?${params.toString()}`;
             } catch (error) {
-                console.error('Search error:', error);
-                alert(`Error: ${error.message || error}`);
+                console.error('Search error:', error.message);
+                alert(`Error: ${error.message || 'Failed to find location. Please try again.'}`);
                 hideLoader();
             }
         }
@@ -692,7 +726,7 @@
 
                 try {
                     const address = await reverseGeocode(lat, lng);
-                    document.getElementById('from-input').value = address;
+                    document.getElementById('from-input').value = address || coordFallback;
                 } catch (error) {
                     console.warn('Reverse geocode failed, using raw coordinates:', error.message);
                     document.getElementById('from-input').value = coordFallback;
@@ -703,13 +737,13 @@
                 console.error('Geolocation error:', error);
                 let msg = "Unable to retrieve your location.";
                 if (error.code === error.TIMEOUT) msg = "Location detection timed out. Please try again or type manually.";
-                if (error.code === error.PERMISSION_DENIED) msg = "Please enable location permissions in your browser.";
+                if (error.code === error.PERMISSION_DENIED) msg = "Please enable location permissions in your browser settings.";
                 alert(msg);
                 hideLoader();
             }, {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+                enableHighAccuracy: false,
+                timeout: 8000,
+                maximumAge: 60000
             });
         }
 
@@ -731,8 +765,13 @@
         async function fetchSuggestions(input, targetId, inputEl) {
             try {
                 const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(input)}&limit=6`;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Photon error: ${response.status}`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
                 const suggestions = (data.features || []).map(f => {
@@ -752,7 +791,13 @@
 
                 renderSuggestions(suggestions, targetId, inputEl);
             } catch (error) {
-                console.error('Autocomplete error:', error);
+                if (error.name === 'AbortError') {
+                    console.warn('Suggestion search timed out');
+                } else {
+                    console.warn('Autocomplete error:', error.message);
+                }
+                // Silently fail - don't show suggestions on error
+                hideSuggestions(targetId);
             }
         }
 
@@ -786,20 +831,38 @@
 
         async function getCoordinates(address) {
             const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1`;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Geocoding error: ${response.status}`);
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-            const data = await response.json();
-            if (data.features && data.features.length > 0) {
-                const [lng, lat] = data.features[0].geometry.coordinates;
-                return { lat, lng };
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+                const data = await response.json();
+                if (data.features && data.features.length > 0) {
+                    const [lng, lat] = data.features[0].geometry.coordinates;
+                    return { lat, lng };
+                }
+                throw new Error(`No results found for "${address}"`);
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    throw new Error(`Location search for "${address}" timed out. Please try again.`);
+                }
+                throw new Error(`Could not find "${address}". Please try a different location.`);
             }
-            throw new Error('Location not found. Try typing a more specific place name.');
         }
 
         async function reverseGeocode(lat, lng) {
             try {
-                const res = await fetch(`https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&limit=1`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const res = await fetch(`https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&limit=1`,
+                    { signal: controller.signal });
+                clearTimeout(timeoutId);
+
                 if (res.ok) {
                     const d = await res.json();
                     if (d.features && d.features.length > 0) {
@@ -812,13 +875,23 @@
                         return [p.street, area, city, state].filter(Boolean).join(', ');
                     }
                 }
-            } catch (e) { console.warn('Photon failed:', e.message); }
+            } catch (e) {
+                console.warn('Photon reverse geocode failed:', e.message);
+            }
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
                 const res = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-                    { headers: { 'User-Agent': 'TouristSpotFinder/1.0' } }
+                    {
+                        signal: controller.signal,
+                        headers: { 'User-Agent': 'TouristSpotFinder/1.0' }
+                    }
                 );
+                clearTimeout(timeoutId);
+
                 if (res.ok) {
                     const d = await res.json();
                     if (!d.error && d.address) {
@@ -830,16 +903,28 @@
                         return [road, area, a.city || a.town, a.state].filter(Boolean).join(', ');
                     }
                 }
-            } catch (e) { console.warn('Nominatim failed (expected on localhost):', e.message); }
+            } catch (e) {
+                console.warn('Nominatim reverse geocode failed:', e.message);
+            }
 
             try {
-                const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const res = await fetch(
+                    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+                    { signal: controller.signal }
+                );
+                clearTimeout(timeoutId);
+
                 if (res.ok) {
                     const d = await res.json();
                     const parts = [d.city || d.locality, d.principalSubdivision, d.countryName].filter(Boolean);
                     if (parts.length) return parts.join(', ');
                 }
-            } catch (e) { console.warn('BigDataCloud failed:', e.message); }
+            } catch (e) {
+                console.warn('BigDataCloud reverse geocode failed:', e.message);
+            }
 
             throw new Error('Could not detect your location name.');
         }

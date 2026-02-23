@@ -7,7 +7,7 @@
     <title>Top Tourist Spots - Result</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #1a73e8;
@@ -250,23 +250,69 @@
         .crowd-bar-fill {
             height: 100%;
             border-radius: 20px;
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
             width: 0%;
+            background: linear-gradient(to right,
+                    #10b981,
+                    /* Green */
+                    #f59e0b,
+                    /* Orange */
+                    #ef4444
+                    /* Red */
+                );
+            background-size: 380px 100%;
+            background-attachment: fixed;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05) inset;
         }
 
+        /* ─── LIVE INDICATOR ───────────────────────────── */
+        .live-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            margin-left: 4px;
+            animation: pulse-dot 1.6s ease-in-out infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.45;
+                transform: scale(0.75);
+            }
+        }
+
+        .crowd-section {
+            transition: opacity 0.3s ease;
+        }
+
+        .crowd-section.updating {
+            opacity: 0.5;
+        }
+
+        .crowd-free,
         .crowd-low {
-            background: #ecfdf5;
-            color: #059669;
+            background: #10b981 !important;
+            color: white !important;
         }
 
         .crowd-mod {
-            background: #fffbeb;
-            color: #d97706;
+            background: #f59e0b !important;
+            color: white !important;
         }
 
         .crowd-high {
-            background: #fef2f2;
-            color: #dc2626;
+            background: #ef4444 !important;
+            color: white !important;
         }
 
         .crowd-unknown {
@@ -274,7 +320,6 @@
             color: var(--text-tertiary);
         }
 
-        /* ─── META ─────────────────────────────────────── */
         .spot-meta {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -489,94 +534,95 @@
         }
 
         async function getNearbyTouristSpots(lat, lng) {
-            const query = `[out:json][timeout:25];
+            const query = `[out:json][timeout:60];
                 (
-                  node["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"]["name"](around:10000,${lat},${lng});
-                  node["historic"~"monument|memorial|castle|ruins"]["name"](around:10000,${lat},${lng});
-                  node["craft"~"tea|coffee|honey"]["name"](around:10000,${lat},${lng});
-                  way["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"]["name"](around:10000,${lat},${lng});
-                  way["historic"~"monument|memorial|castle|ruins"]["name"](around:10000,${lat},${lng});
+                    node["tourism"~"attraction|museum|theme_park|zoo"](around:15000, ${lat}, ${lng});
+                    way["tourism"~"attraction|museum|theme_park|zoo"](around:15000, ${lat}, ${lng});
+                    node["park"~"yes"](around:15000, ${lat}, ${lng});
                 );
                 out center 30;`;
 
             const mirrors = [
+                'https://overpass.osm.ch/api/interpreter',
+                'https://lz4.overpass-api.de/api/interpreter',
                 'https://overpass-api.de/api/interpreter',
                 'https://overpass.kumi.systems/api/interpreter',
-                'https://overpass.osm.ch/api/interpreter',
-                'https://lz4.overpass-api.de/api/interpreter'
+                'https://overpass.openstreetmap.ru/api/interpreter',
+                'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
             ];
 
+            let elements = [];
             for (const baseUrl of mirrors) {
-                const url = `${baseUrl}?data=${encodeURIComponent(query)}`;
                 try {
-                    console.log(`Trying Overpass mirror: ${baseUrl}`);
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-                    const response = await fetch(url, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-
-                    if (!response.ok) {
-                        console.warn(`Mirror ${baseUrl} returned ${response.status}`);
-                        continue;
-                    }
-
-                    const data = await response.json();
-                    if (data && data.elements && data.elements.length > 0) {
-                        const junkName = /^(point\s*#?\d+|node\s*\d+|way\s*\d+|unnamed|noname|\d+)$/i;
-                        const spots = data.elements
-                            .filter(el => {
-                                if (!el.tags || !el.tags.name) return false;
-                                const n = el.tags.name.trim();
-                                if (n.length < 3) return false;
-                                if (junkName.test(n)) return false;
-                                return true;
-                            })
-                            .map(el => {
-                                const t = el.tags;
-                                const sLat = el.center ? el.center.lat : el.lat;
-                                const sLng = el.center ? el.center.lon : el.lon;
-                                const dist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2)) * 111320;
-                                return {
-                                    name: t.name,
-                                    lat: sLat,
-                                    lng: sLng,
-                                    address: t["addr:street"] || t["addr:city"] || t.tourism || t.historic || "See on map",
-                                    distance_value: dist
-                                };
-                            })
-                            .sort((a, b) => a.distance_value - b.distance_value);
-
-                        const normalize = n => n.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        const isSimilarName = (a, b) => {
-                            const na = normalize(a), nb = normalize(b);
-                            if (na === nb) return true;
-                            const firstWord = s => s.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
-                            const wa = firstWord(a), wb = firstWord(b);
-                            if (wa.length > 3 && nb.includes(wa)) return true;
-                            if (wb.length > 3 && na.includes(wb)) return true;
-                            return false;
-                        };
-
-                        const unique = [];
-                        for (const s of spots) {
-                            const isDuplicate = unique.some(u => {
-                                const dLat = (s.lat - u.lat) * 111320;
-                                const dLng = (s.lng - u.lng) * 111320 * Math.cos(s.lat * Math.PI / 180);
-                                const distM = Math.sqrt(dLat * dLat + dLng * dLng);
-                                return distM < 200 || isSimilarName(s.name, u.name);
-                            });
-                            if (!isDuplicate) unique.push(s);
+                    console.log('Trying Overpass mirror:', baseUrl);
+                    const response = await fetch(baseUrl + '?data=' + encodeURIComponent(query));
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.elements && data.elements.length > 0) {
+                            elements = data.elements;
+                            break; // Exit loop if data is successfully fetched
                         }
-                        return unique;
+                    } else {
+                        console.warn(`Mirror ${baseUrl} returned ${response.status}`);
                     }
                 } catch (e) {
-                    console.warn(`Error with mirror ${baseUrl}:`, e.message);
+                    console.error('Fetch error for mirror:', baseUrl, e);
                 }
+                // Small delay before trying next mirror to prevent hitting the same bottleneck
+                await new Promise(r => setTimeout(r, 800));
             }
 
-            console.error('All Overpass mirrors failed or returned no data.');
-            return [];
+            if (elements.length === 0) {
+                console.error('All Overpass mirrors failed or returned no data.');
+                return [];
+            }
+
+            const junkName = /^(point\s*#?\d+|node\s*\d+|way\s*\d+|unnamed|noname|\d+)$/i;
+            const spots = elements
+                .filter(el => {
+                    if (!el.tags || !el.tags.name) return false;
+                    const n = el.tags.name.trim();
+                    if (n.length < 3) return false;
+                    if (junkName.test(n)) return false;
+                    return true;
+                })
+                .map(el => {
+                    const t = el.tags;
+                    const sLat = el.center ? el.center.lat : el.lat;
+                    const sLng = el.center ? el.center.lon : el.lon;
+                    const dist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2)) * 111320;
+                    return {
+                        name: t.name,
+                        lat: sLat,
+                        lng: sLng,
+                        address: t["addr:street"] || t["addr:city"] || t.tourism || t.historic || "See on map",
+                        distance_value: dist
+                    };
+                })
+                .sort((a, b) => a.distance_value - b.distance_value);
+
+            const normalize = n => n.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const isSimilarName = (a, b) => {
+                const na = normalize(a), nb = normalize(b);
+                if (na === nb) return true;
+                const firstWord = s => s.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
+                const wa = firstWord(a), wb = firstWord(b);
+                if (wa.length > 3 && nb.includes(wa)) return true;
+                if (wb.length > 3 && na.includes(wb)) return true;
+                return false;
+            };
+
+            const unique = [];
+            for (const s of spots) {
+                const isDuplicate = unique.some(u => {
+                    const dLat = (s.lat - u.lat) * 111320;
+                    const dLng = (s.lng - u.lng) * 111320 * Math.cos(s.lat * Math.PI / 180);
+                    const distM = Math.sqrt(dLat * dLat + dLng * dLng);
+                    return distM < 200 || isSimilarName(s.name, u.name);
+                });
+                if (!isDuplicate) unique.push(s);
+            }
+            return unique;
         }
 
         async function getTravelData(oLat, oLng, spots) {
@@ -611,18 +657,41 @@
                         item.spot_name.toLowerCase().includes(s.name.toLowerCase())
                     );
                     s.crowd = match ? match.crowd_level : null;
+                    s.lastUpdated = match ? match.last_updated : null;
                 });
             } catch (e) {
                 spots.forEach(s => s.crowd = null);
             }
         }
 
+        function formatTimeAgo(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            let interval = Math.floor(seconds / 31536000);
+            if (interval > 1) return interval + ' years ago';
+
+            interval = Math.floor(seconds / 2592000);
+            if (interval > 1) return interval + ' months ago';
+
+            interval = Math.floor(seconds / 86400);
+            if (interval > 1) return interval + ' days ago';
+
+            interval = Math.floor(seconds / 3600);
+            if (interval > 1) return interval + ' hours ago';
+
+            interval = Math.floor(seconds / 60);
+            if (interval > 1) return interval + ' minutes ago';
+
+            return 'just now';
+        }
+
         function getCrowdColor(count) {
-            if (count < 20) return "#10b981";
-            if (count < 40) return "#84cc16";
-            if (count < 60) return "#f59e0b";
-            if (count < 80) return "#f97316";
-            return "#ef4444";
+            if (count <= 20) return "#10b981"; // Green
+            if (count <= 40) return "#f59e0b"; // Orange
+            return "#ef4444";                 // Red
         }
 
         function renderSpots(spots, oLat, oLng, fName) {
@@ -637,13 +706,9 @@
             spots.forEach(s => {
                 const card = document.createElement('div');
                 card.className = 'spot-card';
+                card.dataset.spot = s.name;
 
-                let crowdHtml = `<div class="crowd-badge crowd-unknown">👥 Crowd: Unknown</div>`;
-                if (s.crowd !== null) {
-                    const color = getCrowdColor(s.crowd);
-                    const lvl = s.crowd > 60 ? 'crowd-high' : (s.crowd > 30 ? 'crowd-mod' : 'crowd-low');
-                    crowdHtml = `<div><div class="crowd-bar-container"><div class="crowd-bar-fill" style="width: ${Math.min(s.crowd, 100)}%; background: ${color};"></div></div><div class="crowd-badge ${lvl}" style="margin-top:8px;">👥 Crowd: ${s.crowd}</div></div>`;
-                }
+                let crowdHtml = buildCrowdHtml(s.crowd, s.lastUpdated);
 
                 const originLabel = fName ? encodeURIComponent(fName) : `${oLat},${oLng}`;
                 const destLabel = encodeURIComponent(s.name);
@@ -662,13 +727,80 @@
                             Go
                         </a>
                     </div>
-                    ${crowdHtml}
+                    <div class="crowd-section">${crowdHtml}</div>
                     <div class="spot-meta">
                         <div class="meta-item"><span class="meta-label">Distance</span><span class="meta-value">${s.distance_text || "—"}</span></div>
                         <div class="meta-item"><span class="meta-label">Drive Time</span><span class="meta-value">${s.duration_text || "—"}</span></div>
                     </div>`;
                 list.appendChild(card);
             });
+
+            // Start real-time listener after cards are rendered
+            setupRealtimeCrowd();
+        }
+
+        function buildCrowdHtml(crowdCount, lastUpdated, isLive = false) {
+            const liveDot = isLive ? '<span class="live-dot" title="Live update"></span>' : '';
+            if (crowdCount === null || crowdCount === undefined) {
+                return `<div class="crowd-badge crowd-unknown">👥 Crowd: Unknown${liveDot}</div>`;
+            }
+            const color = getCrowdColor(crowdCount);
+            let status = "High";
+            let lvl = "crowd-high";
+
+            if (crowdCount <= 10) { status = "Free"; lvl = "crowd-free"; }
+            else if (crowdCount <= 20) { status = "Low"; lvl = "crowd-low"; }
+            else if (crowdCount <= 40) { status = "Medium"; lvl = "crowd-mod"; }
+
+            const timeAgo = formatTimeAgo(lastUpdated);
+            return `<div>
+                <div class="crowd-bar-container">
+                    <div class="crowd-bar-fill" style="width: ${Math.min(crowdCount, 100)}%; background: ${color};"></div>
+                </div>
+                <div class="crowd-badge ${lvl}" style="margin-top:8px;">👥 ${status}: ${crowdCount}%${liveDot}</div>
+                <p class="crowd-timestamp" style="font-size: 0.7rem; color: #9aa3b2; margin-top: 4px;">Updated ${timeAgo}</p>
+            </div>`;
+        }
+
+        function setupRealtimeCrowd() {
+            // Poll Supabase every 3 seconds — works without any dashboard config
+            async function pollCrowd() {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('crowd_data')
+                        .select('*');
+                    if (error || !data) return;
+
+                    const cards = document.querySelectorAll('.spot-card[data-spot]');
+                    cards.forEach(card => {
+                        const cardSpot = card.dataset.spot.toLowerCase();
+                        const match = data.find(item => {
+                            const dbSpot = (item.spot_name || '').toLowerCase();
+                            return cardSpot.includes(dbSpot) || dbSpot.includes(cardSpot);
+                        });
+                        if (!match) return;
+
+                        const section = card.querySelector('.crowd-section');
+                        if (!section) return;
+
+                        // Only update if value actually changed
+                        const currentLevel = section.dataset.level;
+                        const newLevel = String(match.crowd_level);
+                        if (currentLevel === newLevel) return;
+
+                        section.dataset.level = newLevel;
+                        section.classList.add('updating');
+                        setTimeout(() => {
+                            section.innerHTML = buildCrowdHtml(match.crowd_level, match.last_updated, true);
+                            section.classList.remove('updating');
+                        }, 200);
+                    });
+                } catch (e) {
+                    console.warn('Poll error:', e);
+                }
+            }
+
+            setInterval(pollCrowd, 3000);
         }
     </script>
 </body>

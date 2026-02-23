@@ -1,2 +1,8 @@
 Flask==3.0.3
+flask-cors==4.0.0
 python-dotenv==1.0.1
+ultralytics>=8.2.0
+opencv-python-headless
+supabase>=2.0.0
+torch --index-url https://download.pytorch.org/whl/cpu
+torchvision --index-url https://download.pytorch.org/whl/cpu
