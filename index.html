@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TouristSpot Finder</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary-color: #4285F4;
@@ -165,6 +167,40 @@
             box-shadow: var(--shadow);
             transition: transform 0.3s, box-shadow 0.3s;
             border-top: 5px solid var(--accent-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .crowd-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .crowd-low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .crowd-mod {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .crowd-high {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .crowd-unknown {
+            background: #f5f5f5;
+            color: #757575;
         }
 
         .spot-card:hover {
@@ -344,6 +380,11 @@
     </div>
 
     <script>
+        // Supabase Configuration
+        const SUPABASE_URL = "https://patojfbjsgajzalscyuo.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhdG9qZmJqc2dhanphbHNjeXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MjEyODIsImV4cCI6MjA4NzM5NzI4Mn0.JkOcWVhFtNOMT5jEpuyxHt2cm2qU333T7OnEuHM6D1M";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         document.addEventListener('DOMContentLoaded', () => {
             const searchBtn = document.getElementById('search-btn');
             const locationInput = document.getElementById('location-input');
@@ -449,14 +490,46 @@
                     return;
                 }
 
-                showLoader("Calculating distances...");
+                showLoader("Calculating travel distances...");
                 const topSpots = await getDistanceMatrix(lat, lng, spots);
+
+                showLoader("Checking live crowd levels...");
+                await enrichWithCrowdData(topSpots);
+
                 renderSpots(topSpots);
             } catch (error) {
                 console.error('Process search error:', error);
-                // Optionally alert here, but callers often handle alerts too
             } finally {
                 hideLoader();
+            }
+        }
+
+        async function enrichWithCrowdData(spots) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('crowd_data')
+                    .select('*');
+
+                if (error) throw error;
+
+                spots.forEach(spot => {
+                    // Smart Matching Logic
+                    const match = data.find(item => {
+                        const dbName = item.spot_name.toLowerCase();
+                        const osmName = spot.name.toLowerCase();
+                        // Check if DB name is inside OSM name or vice versa
+                        return osmName.includes(dbName) || dbName.includes(osmName);
+                    });
+
+                    if (match) {
+                        spot.crowd = match.crowd_level;
+                    } else {
+                        spot.crowd = null;
+                    }
+                });
+            } catch (e) {
+                console.error('Supabase fetch error:', e);
+                spots.forEach(s => s.crowd = null);
             }
         }
 
@@ -650,9 +723,25 @@
             spots.forEach(spot => {
                 const card = document.createElement('div');
                 card.className = 'spot-card';
+
+                // Display crowd level if available
+                let crowdHtml = '';
+                if (spot.crowd === undefined || spot.crowd === null) {
+                    crowdHtml = `<div class="crowd-badge crowd-unknown">👥 Crowd: Not Determined</div>`;
+                } else {
+                    let levelClass = 'crowd-low';
+                    if (spot.crowd > 60) levelClass = 'crowd-high';
+                    else if (spot.crowd > 30) levelClass = 'crowd-mod';
+
+                    crowdHtml = `<div class="crowd-badge ${levelClass}">👥 Crowd Level: ${spot.crowd} People</div>`;
+                }
+
                 card.innerHTML = `
-                    <h3>${spot.name}</h3>
-                    <p class="address">${spot.address}</p>
+                    <div class="spot-info">
+                        <h3>${spot.name}</h3>
+                        <p class="address">${spot.address}</p>
+                    </div>
+                    ${crowdHtml}
                     <div class="spot-meta">
                         <div class="meta-item">
                             <span class="meta-label">Distance</span>
