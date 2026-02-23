@@ -534,7 +534,7 @@
                     document.getElementById('from-input').value = address;
                 } catch (error) {
                     console.error('Live address detection error:', error);
-                    alert("Located your coordinates, but couldn't detect the address name.");
+                    alert(`Located your coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)}), but couldn't detect the address name. Error: ${error.message}`);
                 } finally {
                     hideLoader();
                 }
@@ -570,7 +570,16 @@
         async function fetchSuggestions(input, targetId, inputEl) {
             try {
                 const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&addressdetails=1&limit=5`;
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'TouristSpotFinder/1.0 (Impact-AI-THON Prototype)'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Nominatim error: ${response.status} ${response.statusText}`);
+                }
+
                 const data = await response.json();
 
                 const suggestions = data.map(item => ({
@@ -614,7 +623,16 @@
 
         async function getCoordinates(address) {
             const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'TouristSpotFinder/1.0 (Impact-AI-THON Prototype)'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Geocoding error: ${response.status} ${response.statusText}`);
+            }
+
             const data = await response.json();
             if (data && data.length > 0) {
                 return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
@@ -625,11 +643,28 @@
         async function reverseGeocode(lat, lng) {
             try {
                 const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'TouristSpotFinder/1.0 (Impact-AI-THON Prototype)'
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error('Nominatim API error:', response.status, response.statusText);
+                    throw new Error(`API returned ${response.status}`);
+                }
+
                 const data = await response.json();
+                if (data.error) {
+                    console.error('Nominatim API logic error:', data.error);
+                    throw new Error(data.error);
+                }
+
                 return data.display_name || `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             } catch (e) {
-                return `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                console.error('Reverse geocoding exception:', e);
+                // Throwing here so performLiveLocationAutoFill can catch it and show the alert
+                throw e;
             }
         }
 
