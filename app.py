@@ -4,6 +4,7 @@ import os
 import cv2
 import time
 import threading
+import gc
 from datetime import datetime
 from ultralytics import YOLO
 from supabase import create_client, Client
@@ -41,12 +42,12 @@ VIDEO_SOURCES = [
     {"path": "Rose Garden.mp4", "spot": "Rose Garden", "capacity": 50},
     {"path": "Deer Park.mp4", "spot": "Deer Park", "capacity": 100},
     {"path": "Honeymoon Boat House.mp4", "spot": "Honeymoon Boat House", "capacity": 150},
-    {"path": "Tribal research centre meseum.mp4", "spot": "Tribal Museum", "capacity": 200}
+    {"path": "Sims Park.mp4", "spot": "Tribal Museum", "capacity": 200}
 ]
 
 def count_people_in_frame(frame):
-    # Use better confidence and standard image size for accuracy
-    results = model(frame, conf=0.25, imgsz=640, verbose=False)
+    # Use smaller imgsz=320 to stay within 512MB RAM limit on Render
+    results = model(frame, conf=0.25, imgsz=320, verbose=False)
     person_count = 0
     for result in results:
         for box in result.boxes:
@@ -91,8 +92,8 @@ def process_video(video_path, spot_name, capacity):
                     update_supabase(avg_count, spot_name, capacity)
                 break
 
-            # Process every 2nd frame (increased from 5th) for better tracking
-            if frame_count % 2 == 0:
+            # Process every 10th frame (reduced from 2nd) to save memory/CPU
+            if frame_count % 10 == 0:
                 person_count = count_people_in_frame(frame)
                 person_counts.append(person_count)
 
@@ -105,6 +106,7 @@ def process_video(video_path, spot_name, capacity):
                     update_supabase(avg_count, spot_name, capacity)
                 person_counts = []
                 last_update_time = current_time
+                gc.collect()  # Force garbage collection to free up RAM
 
             # Small sleep to yield to other threads
             time.sleep(0.01)
