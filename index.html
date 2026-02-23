@@ -85,7 +85,7 @@
             margin-left: 5px;
         }
 
-        #location-input {
+        .input-group input {
             width: 100%;
             padding: 18px 25px;
             border: 2px solid #eef0f2;
@@ -96,7 +96,7 @@
             background: #fbfcfe;
         }
 
-        #location-input:focus {
+        .input-group input:focus {
             outline: none;
             border-color: var(--primary-color);
             background: white;
@@ -361,15 +361,26 @@
         <main>
             <div class="search-container">
                 <div class="input-group">
-                    <label for="location-input">Custom Location</label>
-                    <input type="text" id="location-input" placeholder="e.g. London, Paris, or New York"
-                        aria-label="Search location" autocomplete="off">
-                    <div id="suggestions" class="suggestions-container hidden"></div>
+                    <label for="from-input">Starting From (Origin)</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="from-input" placeholder="Current Location or Enter city..."
+                            aria-label="Starting location" autocomplete="off">
+                        <div id="from-suggestions" class="suggestions-container hidden"></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="to-input">Going To (Destination)</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="to-input" placeholder="Where do you want to find spots?"
+                            aria-label="Destination location" autocomplete="off">
+                        <div id="to-suggestions" class="suggestions-container hidden"></div>
+                    </div>
                 </div>
 
                 <div class="button-group">
-                    <button id="location-btn" class="btn btn-secondary" title="Use current location">
-                        <span>📍</span> Current Location
+                    <button id="location-btn" class="btn btn-secondary" title="Use current location for Start">
+                        <span>📍</span> Use My Location
                     </button>
                     <button id="search-btn" class="btn btn-primary">
                         Find Tourist Spots
@@ -403,48 +414,72 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const searchBtn = document.getElementById('search-btn');
-            const locationInput = document.getElementById('location-input');
+            const fromInput = document.getElementById('from-input');
+            const toInput = document.getElementById('to-input');
 
             searchBtn.addEventListener('click', performManualSearch);
-            locationInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') performManualSearch();
+
+            [fromInput, toInput].forEach(inp => {
+                inp.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') performManualSearch();
+                });
             });
 
-            // Autocomplete Logic
-            let debounceTimer;
-            locationInput.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                const input = locationInput.value.trim();
+            // Autocomplete Logic for From
+            let fromTimer;
+            fromInput.addEventListener('input', () => {
+                clearTimeout(fromTimer);
+                const input = fromInput.value.trim();
                 if (input.length < 2) {
-                    hideSuggestions();
+                    hideSuggestions('from-suggestions');
                     return;
                 }
-                debounceTimer = setTimeout(() => fetchSuggestions(input), 300);
+                fromTimer = setTimeout(() => fetchSuggestions(input, 'from-suggestions', fromInput), 300);
+            });
+
+            // Autocomplete Logic for To
+            let toTimer;
+            toInput.addEventListener('input', () => {
+                clearTimeout(toTimer);
+                const input = toInput.value.trim();
+                if (input.length < 2) {
+                    hideSuggestions('to-suggestions');
+                    return;
+                }
+                toTimer = setTimeout(() => fetchSuggestions(input, 'to-suggestions', toInput), 300);
             });
 
             // Hide suggestions when clicking outside
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('.input-wrapper')) {
-                    hideSuggestions();
+                const isInputWrapper = e.target.closest('.input-wrapper');
+                if (!isInputWrapper) {
+                    hideSuggestions('from-suggestions');
+                    hideSuggestions('to-suggestions');
                 }
             });
 
             const locationBtn = document.getElementById('location-btn');
-            locationBtn.addEventListener('click', performLiveSearch);
+            locationBtn.addEventListener('click', performLiveLocationAutoFill);
         });
 
         async function performManualSearch() {
-            const location = document.getElementById('location-input').value.trim();
-            if (!location) {
-                alert("Please enter a location.");
+            const fromVal = document.getElementById('from-input').value.trim();
+            const toVal = document.getElementById('to-input').value.trim();
+
+            if (!fromVal || !toVal) {
+                alert("Please enter both starting and destination locations.");
                 return;
             }
 
-            hideSuggestions();
+            hideSuggestions('from-suggestions');
+            hideSuggestions('to-suggestions');
+
             try {
-                showLoader("Finding coordinates...");
-                const coords = await getCoordinates(location);
-                await processSearch(coords.lat, coords.lng, "Searching near " + location + "...");
+                showLoader("Calculating route coordinates...");
+                const fromCoords = await getCoordinates(fromVal);
+                const toCoords = await getCoordinates(toVal);
+
+                await processSearch(fromCoords.lat, fromCoords.lng, toCoords.lat, toCoords.lng, `Finding spots in ${toVal}...`);
             } catch (error) {
                 console.error('Search error:', error);
                 alert(`Error: ${error.message || error}`);
@@ -453,13 +488,13 @@
             }
         }
 
-        async function performLiveSearch() {
+        async function performLiveLocationAutoFill() {
             if (!navigator.geolocation) {
                 alert("Geolocation is not supported by your browser.");
                 return;
             }
 
-            hideSuggestions();
+            hideSuggestions('from-suggestions');
             showLoader("Detecting your location address...");
 
             navigator.geolocation.getCurrentPosition(async (position) => {
@@ -467,12 +502,8 @@
                 const lng = position.coords.longitude;
 
                 try {
-                    // Reverse geocode to update the input box with real address
                     const address = await reverseGeocode(lat, lng);
-                    document.getElementById('location-input').value = address;
-
-                    // Do NOT search automatically as requested. 
-                    // Let the user click "Find Tourist Spots"
+                    document.getElementById('from-input').value = address;
                 } catch (error) {
                     console.error('Live address detection error:', error);
                     alert("Located your coordinates, but couldn't detect the address name.");
@@ -488,26 +519,26 @@
                 hideLoader();
             }, {
                 enableHighAccuracy: true,
-                timeout: 10000, // 10 second timeout to prevent infinite loading
+                timeout: 10000,
                 maximumAge: 0
             });
         }
 
-        async function processSearch(lat, lng, statusText) {
+        async function processSearch(startLat, startLng, destLat, destLng, statusText) {
             try {
                 const spotsList = document.getElementById('spots-list');
                 spotsList.innerHTML = '';
 
                 showLoader(statusText || "Searching for tourist spots...");
-                const spots = await getNearbyTouristSpots(lat, lng);
+                const spots = await getNearbyTouristSpots(destLat, destLng);
 
                 if (spots.length === 0) {
                     renderSpots([]);
                     return;
                 }
 
-                showLoader("Calculating travel distances...");
-                const topSpots = await getDistanceMatrix(lat, lng, spots);
+                showLoader("Calculating travel distances from start...");
+                const topSpots = await getDistanceMatrix(startLat, startLng, spots);
 
                 showLoader("Checking live crowd levels...");
                 await enrichWithCrowdData(topSpots);
@@ -560,7 +591,7 @@
             document.getElementById('loader').classList.add('hidden');
         }
 
-        async function fetchSuggestions(input) {
+        async function fetchSuggestions(input, targetId, inputEl) {
             try {
                 const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&addressdetails=1&limit=5`;
                 const response = await fetch(url);
@@ -571,14 +602,14 @@
                     lat: item.lat,
                     lon: item.lon
                 }));
-                renderSuggestions(suggestions);
+                renderSuggestions(suggestions, targetId, inputEl);
             } catch (error) {
                 console.error('Autocomplete error:', error);
             }
         }
 
-        function renderSuggestions(suggestions) {
-            const container = document.getElementById('suggestions');
+        function renderSuggestions(suggestions, targetId, inputEl) {
+            const container = document.getElementById(targetId);
             container.innerHTML = '';
 
             if (suggestions.length === 0) {
@@ -591,8 +622,8 @@
                 div.className = 'suggestion-item';
                 div.textContent = item.description;
                 div.onclick = () => {
-                    document.getElementById('location-input').value = item.description;
-                    hideSuggestions();
+                    inputEl.value = item.description;
+                    hideSuggestions(targetId);
                 };
                 container.appendChild(div);
             });
@@ -600,8 +631,8 @@
             container.classList.remove('hidden');
         }
 
-        function hideSuggestions() {
-            const suggestions = document.getElementById('suggestions');
+        function hideSuggestions(targetId) {
+            const suggestions = document.getElementById(targetId);
             if (suggestions) suggestions.classList.add('hidden');
         }
 
