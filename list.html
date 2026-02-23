@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Tourist Spots - Result</title>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --accent-color: #34a853;
+            --text-color: #202124;
+            --secondary-text: #70757a;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-radius: 16px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        #app {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0 20px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .trip-info {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 10px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 30px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #f1f3f4;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Results Grid */
+        .spots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .spot-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-top: 5px solid var(--accent-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .spot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .crowd-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .crowd-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .crowd-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease, background-color 0.5s ease;
+            width: 0%;
+        }
+
+        .crowd-low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .crowd-mod {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .crowd-high {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .crowd-unknown {
+            background: #f5f5f5;
+            color: #757575;
+        }
+
+        .spot-card h3 {
+            font-size: 1.25rem;
+            color: var(--text-color);
+        }
+
+        .spot-card .address {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            height: 3em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .spot-meta {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--secondary-text);
+            font-weight: 600;
+        }
+
+        .meta-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .loader-container {
+            text-align: center;
+            padding: 100px 0;
+        }
+
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <a href="/" class="back-btn">← Back to Search</a>
+
+        <header>
+            <h1>Best Spots for Your Journey</h1>
+            <div id="trip-header" class="trip-info hidden">
+                <span id="start-label">...</span>
+                <span>➔</span>
+                <span id="dest-label">...</span>
+            </div>
+        </header>
+
+        <div id="loader" class="loader-container">
+            <div class="loader"></div>
+            <p id="loader-text">Loading the ultimate trip results...</p>
+        </div>
+
+        <div id="results-section" class="hidden">
+            <div id="spots-list" class="spots-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://patojfbjsgajzalscyuo.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhdG9qZmJqc2dhanphbHNjeXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MjEyODIsImV4cCI6MjA4NzM5NzI4Mn0.JkOcWVhFtNOMT5jEpuyxHt2cm2qU333T7OnEuHM6D1M";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const fromLat = params.get('fLat');
+            const fromLng = params.get('fLng');
+            const toLat = params.get('tLat');
+            const toLng = params.get('tLng');
+            const fromName = params.get('fName');
+            const toName = params.get('tName');
+
+            if (!fromLat || !toLat) {
+                document.body.innerHTML = '<h1>Invalid Trip Parameters. Please <a href="/">go back and search again</a>.</h1>';
+                return;
+            }
+
+            document.getElementById('start-label').textContent = fromName || "Starting Point";
+            document.getElementById('dest-label').textContent = toName || "Destination";
+            document.getElementById('trip-header').classList.remove('hidden');
+
+            await processResults(parseFloat(fromLat), parseFloat(fromLng), parseFloat(toLat), parseFloat(toLng));
+        };
+
+        async function processResults(sLat, sLng, dLat, dLng) {
+            try {
+                updateLoader("Finding top spots at destination...");
+                const spots = await getNearbyTouristSpots(dLat, dLng);
+
+                if (spots.length === 0) {
+                    renderSpots([]);
+                    return;
+                }
+
+                updateLoader("Calculating travel distances from " + (new URLSearchParams(window.location.search).get('fName') || "origin") + "...");
+                const topSpots = await getTravelData(sLat, sLng, spots);
+
+                updateLoader("Checking live crowd status...");
+                await enrichWithCrowd(topSpots);
+
+                renderSpots(topSpots);
+            } catch (e) {
+                console.error(e);
+                alert("Failed to load results.");
+            } finally {
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('results-section').classList.remove('hidden');
+            }
+        }
+
+        function updateLoader(text) {
+            document.getElementById('loader-text').textContent = text;
+        }
+
+        async function getNearbyTouristSpots(lat, lng) {
+            const query = `[out:json];
+                (
+                  node["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"](around:10000,${lat},${lng});
+                  node["historic"~"monument|memorial|castle|ruins"](around:10000,${lat},${lng});
+                  node["industrial"~"factory|mine"](around:10000,${lat},${lng});
+                  node["craft"~"tea|coffee|honey"](around:10000,${lat},${lng});
+                  way["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"](around:10000,${lat},${lng});
+                  way["historic"~"monument|memorial|castle|ruins"](around:10000,${lat},${lng});
+                );
+                out center 20;`;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.elements) {
+                    const seen = new Set();
+                    const spots = data.elements.map(el => {
+                        const t = el.tags || {};
+                        const type = t.tourism || t.historic || "Spot";
+                        const name = t.name || (t.brand ? `${t.brand} ${type}` : type);
+                        const sLat = el.center ? el.center.lat : el.lat;
+                        const sLng = el.center ? el.center.lon : el.lon;
+                        const dist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2)) * 111320;
+                        return { name, lat: sLat, lng: sLng, address: t["addr:street"] || "In OSM", distance_value: dist };
+                    }).sort((a, b) => a.distance_value - b.distance_value);
+
+                    const unique = [];
+                    for (const s of spots) {
+                        if (!seen.has(s.name)) { seen.add(s.name); unique.push(s); }
+                    }
+                    return unique;
+                }
+            } catch (e) { } return [];
+        }
+
+        async function getTravelData(oLat, oLng, spots) {
+            const coords = `${oLng},${oLat};` + spots.map(s => `${s.lng},${s.lat}`).join(';');
+            const url = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=duration,distance`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.code === 'Ok') {
+                    spots.forEach((s, i) => {
+                        const d = data.distances[0][i + 1];
+                        const t = data.durations[0][i + 1];
+                        s.distance_value = d;
+                        s.distance_text = `${(d / 1000).toFixed(1)} km`;
+                        s.duration_text = `${Math.round(t / 60)} min`;
+                    });
+                }
+            } catch (e) { }
+            return spots.sort((a, b) => a.distance_value - b.distance_value).slice(0, 5);
+        }
+
+        async function enrichWithCrowd(spots) {
+            try {
+                const { data } = await supabaseClient.from('crowd_data').select('*');
+                spots.forEach(s => {
+                    const match = data.find(item => s.name.toLowerCase().includes(item.spot_name.toLowerCase()) || item.spot_name.toLowerCase().includes(s.name.toLowerCase()));
+                    s.crowd = match ? match.crowd_level : null;
+                });
+            } catch (e) { }
+        }
+
+        function getCrowdColor(count) {
+            if (count < 20) return "#4caf50";
+            if (count < 40) return "#8bc34a";
+            if (count < 60) return "#ffeb3b";
+            if (count < 80) return "#ff9800";
+            return "#f44336";
+        }
+
+        function renderSpots(spots) {
+            const list = document.getElementById('spots-list');
+            list.innerHTML = '';
+            spots.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'spot-card';
+                let crowdHtml = `<div class="crowd-badge crowd-unknown">👥 Crowd: Not Determined</div>`;
+                if (s.crowd !== null) {
+                    const color = getCrowdColor(s.crowd);
+                    const lvl = s.crowd > 60 ? 'crowd-high' : (s.crowd > 30 ? 'crowd-mod' : 'crowd-low');
+                    crowdHtml = `<div><div class="crowd-bar-container"><div class="crowd-bar-fill" style="width: ${Math.min(s.crowd, 100)}%; background: ${color};"></div></div><div class="crowd-badge ${lvl}" style="margin-top:8px;">👥 Crowd: ${s.crowd}</div></div>`;
+                }
+                card.innerHTML = `<h3>${s.name}</h3><p class="address">${s.address}</p>${crowdHtml}<div class="spot-meta"><div class="meta-item"><span class="meta-label">Distance</span><span class="meta-value">${s.distance_text || "..."}</span></div><div class="meta-item"><span class="meta-label">Time</span><span class="meta-value">${s.duration_text || "..."}</span></div></div>`;
+                list.appendChild(card);
+            });
+        }
+    </script>
+</body>
+
+</html>

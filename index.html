@@ -390,13 +390,7 @@
 
             <div id="loader" class="loader-container hidden">
                 <div class="loader"></div>
-                <p>Finding the best spots for you...</p>
-            </div>
-
-            <div id="results-section" class="results-section">
-                <div id="spots-list" class="spots-grid">
-                    <!-- Cards will be injected here -->
-                </div>
+                <p>Preparing your trip results...</p>
             </div>
         </main>
 
@@ -479,11 +473,19 @@
                 const fromCoords = await getCoordinates(fromVal);
                 const toCoords = await getCoordinates(toVal);
 
-                await processSearch(fromCoords.lat, fromCoords.lng, toCoords.lat, toCoords.lng, `Finding spots in ${toVal}...`);
+                // Redirect to list page with parameters
+                const params = new URLSearchParams({
+                    fLat: fromCoords.lat,
+                    fLng: fromCoords.lng,
+                    tLat: toCoords.lat,
+                    tLng: toCoords.lng,
+                    fName: fromVal,
+                    tName: toVal
+                });
+                window.location.href = `/list?${params.toString()}`;
             } catch (error) {
                 console.error('Search error:', error);
                 alert(`Error: ${error.message || error}`);
-            } finally {
                 hideLoader();
             }
         }
@@ -524,60 +526,8 @@
             });
         }
 
-        async function processSearch(startLat, startLng, destLat, destLng, statusText) {
-            try {
-                const spotsList = document.getElementById('spots-list');
-                spotsList.innerHTML = '';
-
-                showLoader(statusText || "Searching for tourist spots...");
-                const spots = await getNearbyTouristSpots(destLat, destLng);
-
-                if (spots.length === 0) {
-                    renderSpots([]);
-                    return;
-                }
-
-                showLoader("Calculating travel distances from start...");
-                const topSpots = await getDistanceMatrix(startLat, startLng, spots);
-
-                showLoader("Checking live crowd levels...");
-                await enrichWithCrowdData(topSpots);
-
-                renderSpots(topSpots);
-            } catch (error) {
-                console.error('Process search error:', error);
-            } finally {
-                hideLoader();
-            }
-        }
-
         async function enrichWithCrowdData(spots) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('crowd_data')
-                    .select('*');
-
-                if (error) throw error;
-
-                spots.forEach(spot => {
-                    // Smart Matching Logic
-                    const match = data.find(item => {
-                        const dbName = item.spot_name.toLowerCase();
-                        const osmName = spot.name.toLowerCase();
-                        // Check if DB name is inside OSM name or vice versa
-                        return osmName.includes(dbName) || dbName.includes(osmName);
-                    });
-
-                    if (match) {
-                        spot.crowd = match.crowd_level;
-                    } else {
-                        spot.crowd = null;
-                    }
-                });
-            } catch (e) {
-                console.error('Supabase fetch error:', e);
-                spots.forEach(s => s.crowd = null);
-            }
+            // Logic moved to list.html
         }
 
         function showLoader(text) {
@@ -657,176 +607,7 @@
             }
         }
 
-        async function getNearbyTouristSpots(lat, lng) {
-            // Expanded query to include more tourism, historic, industrial, and craft tags
-            const query = `[out:json];
-                (
-                  node["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"](around:10000,${lat},${lng});
-                  node["historic"~"monument|memorial|castle|ruins"](around:10000,${lat},${lng});
-                  node["industrial"~"factory|mine"](around:10000,${lat},${lng});
-                  node["craft"~"tea|coffee|honey"](around:10000,${lat},${lng});
-                  way["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"](around:10000,${lat},${lng});
-                  way["historic"~"monument|memorial|castle|ruins"](around:10000,${lat},${lng});
-                  way["industrial"~"factory|mine"](around:10000,${lat},${lng});
-                  way["craft"~"tea|coffee|honey"](around:10000,${lat},${lng});
-                );
-                out center 20;`;
-            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data && data.elements) {
-                    const seenNames = new Set();
-                    const spots = [];
-
-                    // Sort by rough distance first to ensure we pick the closest one for duplicates
-                    const rawSpots = data.elements.map(element => {
-                        const tags = element.tags || {};
-                        const typeName = tags.tourism || tags.historic || tags.industrial || tags.craft || "Tourist Spot";
-                        const formattedType = typeName.charAt(0).toUpperCase() + typeName.slice(1).replace(/_/g, ' ');
-
-                        const brand = tags.brand || tags.operator || "";
-                        let finalName = tags.name || "";
-
-                        if (!finalName) {
-                            finalName = brand ? `${brand} ${formattedType}` : formattedType;
-                        } else if (brand && !finalName.toLowerCase().includes(brand.toLowerCase())) {
-                            finalName = `${brand} - ${finalName}`;
-                        }
-
-                        const sLat = element.center ? element.center.lat : element.lat;
-                        const sLng = element.center ? element.center.lon : element.lon;
-                        const roughDist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2));
-
-                        return {
-                            name: finalName,
-                            address: tags["addr:street"] ? `${tags["addr:street"]} ${tags["addr:housenumber"] || ""}` : "Location in OSM",
-                            lat: sLat,
-                            lng: sLng,
-                            distance_text: "Checking...",
-                            duration_text: "Checking...",
-                            distance_value: roughDist * 111320
-                        };
-                    });
-
-                    // Sort by distance and deduplicate
-                    rawSpots.sort((a, b) => a.distance_value - b.distance_value);
-
-                    for (const spot of rawSpots) {
-                        if (!seenNames.has(spot.name)) {
-                            seenNames.add(spot.name);
-                            spots.push(spot);
-                        }
-                    }
-                    return spots;
-                }
-            } catch (error) {
-                console.error('Overpass error:', error);
-            }
-            return [];
-        }
-
-        async function getDistanceMatrix(originLat, originLng, spots) {
-            if (!spots.length) return [];
-
-            const coords = `${originLng},${originLat};` + spots.map(s => `${s.lng},${s.lat}`).join(';');
-            const url = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=duration,distance`;
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.code === 'Ok') {
-                    const distances = data.distances ? data.distances[0] : null;
-                    const durations = data.durations ? data.durations[0] : null;
-
-                    spots.forEach((spot, i) => {
-                        const distMeters = distances ? distances[i + 1] : null;
-                        const durSeconds = durations ? durations[i + 1] : null;
-
-                        if (distMeters !== null && distMeters !== undefined) {
-                            spot.distance_value = distMeters;
-                            spot.distance_text = `${(distMeters / 1000).toFixed(1)} km`;
-                        }
-                        if (durSeconds !== null && durSeconds !== undefined) {
-                            spot.duration_text = `${Math.round(durSeconds / 60)} min`;
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('OSRM fetch error:', error);
-            }
-
-            // Always sort by distance_value (either OSRM precise or rough degrees fallback)
-            return spots.sort((a, b) => a.distance_value - b.distance_value).slice(0, 5);
-        }
-
-        function getCrowdColor(count) {
-            // VIBGYOR-inspired scale: Green (low) -> Yellow -> Orange -> Red (high)
-            if (count < 20) return "#4caf50"; // Green
-            if (count < 40) return "#8bc34a"; // Light Green
-            if (count < 60) return "#ffeb3b"; // Yellow
-            if (count < 80) return "#ff9800"; // Orange
-            return "#f44336"; // Red
-        }
-
-        function renderSpots(spots) {
-            const spotsList = document.getElementById('spots-list');
-            spotsList.innerHTML = '';
-
-            if (!spots || spots.length === 0) {
-                spotsList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #70757a;">No tourist spots found in this area. Try another location!</p>';
-                return;
-            }
-
-            spots.forEach(spot => {
-                const card = document.createElement('div');
-                card.className = 'spot-card';
-
-                // Display crowd level and indicator if available
-                let crowdHtml = '';
-                if (spot.crowd === undefined || spot.crowd === null) {
-                    crowdHtml = `<div class="crowd-badge crowd-unknown">👥 Crowd: Not Determined</div>`;
-                } else {
-                    const barWidth = Math.min(spot.crowd, 100);
-                    const barColor = getCrowdColor(spot.crowd);
-
-                    let levelClass = 'crowd-low';
-                    if (spot.crowd > 60) levelClass = 'crowd-high';
-                    else if (spot.crowd > 30) levelClass = 'crowd-mod';
-
-                    crowdHtml = `
-                        <div class="crowd-visual">
-                            <div class="crowd-bar-container">
-                                <div class="crowd-bar-fill" style="width: ${barWidth}%; background-color: ${barColor};"></div>
-                            </div>
-                            <div class="crowd-badge ${levelClass}" style="margin-top: 8px;">👥 Crowd Level: ${spot.crowd} People</div>
-                        </div>
-                    `;
-                }
-
-                card.innerHTML = `
-                    <div class="spot-info">
-                        <h3>${spot.name}</h3>
-                        <p class="address">${spot.address}</p>
-                    </div>
-                    ${crowdHtml}
-                    <div class="spot-meta">
-                        <div class="meta-item">
-                            <span class="meta-label">Distance</span>
-                            <span class="meta-value">${spot.distance_text}</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="meta-label">Travel Time</span>
-                            <span class="meta-value">${spot.duration_text}</span>
-                        </div>
-                    </div>
-                `;
-                spotsList.appendChild(card);
-            });
-        }
+        // Result processing logic moved to list.html
     </script>
 </body>
 
