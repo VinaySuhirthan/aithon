@@ -508,7 +508,7 @@
                     tName: toVal
                 });
                 console.log("Redirecting to results page...");
-                window.location.href = `/list?${params.toString()}`;
+                window.location.href = `list.html?${params.toString()}`;
             } catch (error) {
                 console.error('Search error:', error);
                 alert(`Error: ${error.message || error}`);
@@ -528,13 +528,15 @@
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
+                const coordFallback = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 
                 try {
                     const address = await reverseGeocode(lat, lng);
                     document.getElementById('from-input').value = address;
                 } catch (error) {
-                    console.error('Live address detection error:', error);
-                    alert(`Located your coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)}), but couldn't detect the address name. Error: ${error.message}`);
+                    // Silently fall back to coordinates — avoids alert spam from Nominatim 429 rate limiting
+                    console.warn('Reverse geocode failed, using raw coordinates:', error.message);
+                    document.getElementById('from-input').value = coordFallback;
                 } finally {
                     hideLoader();
                 }
@@ -569,24 +571,28 @@
 
         async function fetchSuggestions(input, targetId, inputEl) {
             try {
-                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&addressdetails=1&limit=5`;
-                const response = await fetch(url, {
-                    headers: {
-                        'User-Agent': 'TouristSpotFinder/1.0 (Impact-AI-THON Prototype)'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Nominatim error: ${response.status} ${response.statusText}`);
-                }
+                // Photon by Komoot — CORS-friendly OSM search, no API key needed
+                const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(input)}&limit=6`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Photon error: ${response.status}`);
 
                 const data = await response.json();
+                const suggestions = (data.features || []).map(f => {
+                    const p = f.properties;
+                    // Build a readable label: Name + City/State/Country
+                    const parts = [
+                        p.name,
+                        p.city || p.town || p.village || p.county,
+                        p.state,
+                        p.country
+                    ].filter(Boolean);
+                    return {
+                        description: parts.join(', '),
+                        lat: f.geometry.coordinates[1],
+                        lon: f.geometry.coordinates[0]
+                    };
+                }).filter(s => s.description);
 
-                const suggestions = data.map(item => ({
-                    description: item.display_name,
-                    lat: item.lat,
-                    lon: item.lon
-                }));
                 renderSuggestions(suggestions, targetId, inputEl);
             } catch (error) {
                 console.error('Autocomplete error:', error);
@@ -622,50 +628,67 @@
         }
 
         async function getCoordinates(address) {
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': 'TouristSpotFinder/1.0 (Impact-AI-THON Prototype)'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`Geocoding error: ${response.status} ${response.statusText}`);
-            }
+            // Photon by Komoot — CORS-friendly, free, OSM-based forward geocoding
+            const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Geocoding error: ${response.status}`);
 
             const data = await response.json();
-            if (data && data.length > 0) {
-                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            if (data.features && data.features.length > 0) {
+                const [lng, lat] = data.features[0].geometry.coordinates;
+                return { lat, lng };
             }
-            throw new Error("Location not found.");
+            throw new Error('Location not found. Try typing a more specific place name.');
         }
 
         async function reverseGeocode(lat, lng) {
+            // Primary: Photon by Komoot — OSM-based, CORS-friendly, free, gives exact POI names
             try {
-                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
-                const response = await fetch(url, {
-                    headers: {
-                        'User-Agent': 'TouristSpotFinder/1.0 (Impact-AI-THON Prototype)'
+                const url = `https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&limit=1`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Photon response:', data);
+                    if (data.features && data.features.length > 0) {
+                        const p = data.features[0].properties;
+                        // Priority: specific POI name → street + district → city
+                        const name = p.name;
+                        const street = p.street;
+                        const district = p.district || p.suburb;
+                        const city = p.city || p.town || p.village;
+                        const state = p.state;
+
+                        // If we have a named POI (college, shop, etc.) show: Name, City, State
+                        if (name) {
+                            return [name, city || district, state].filter(Boolean).join(', ');
+                        }
+                        // Otherwise: Street, District, City, State
+                        return [street, district, city, state].filter(Boolean).join(', ');
                     }
-                });
-
-                if (!response.ok) {
-                    console.error('Nominatim API error:', response.status, response.statusText);
-                    throw new Error(`API returned ${response.status}`);
                 }
-
-                const data = await response.json();
-                if (data.error) {
-                    console.error('Nominatim API logic error:', data.error);
-                    throw new Error(data.error);
-                }
-
-                return data.display_name || `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             } catch (e) {
-                console.error('Reverse geocoding exception:', e);
-                // Throwing here so performLiveLocationAutoFill can catch it and show the alert
-                throw e;
+                console.warn('Photon failed, trying BigDataCloud...', e.message);
             }
+
+            // Fallback: BigDataCloud — free, no rate limits, city-level only
+            try {
+                const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('BigDataCloud response:', data);
+                    const parts = [
+                        data.city || data.locality,
+                        data.principalSubdivision,
+                        data.countryName
+                    ].filter(Boolean);
+                    if (parts.length > 0) return parts.join(', ');
+                }
+            } catch (e) {
+                console.warn('BigDataCloud also failed:', e.message);
+            }
+
+            throw new Error('Could not determine your location name.');
         }
 
         // Result processing logic moved to list.html
