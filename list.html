@@ -480,7 +480,10 @@
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
                         <h3 style="flex: 1;">${s.name}</h3>
                         <a href="${gMapsUrl}" target="_blank" class="nav-button" title="Navigate with Google Maps">
-                            <span>📍</span> Navigate
+                            <svg width="18" height="18" viewBox="0 0 24 24" style="margin-right: 4px;">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/>
+                            </svg>
+                            Navigate
                         </a>
                     </div>
                     <p class="address">${s.address}</p>
