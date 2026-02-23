@@ -507,8 +507,11 @@
                     fName: fromVal,
                     tName: toVal
                 });
-                console.log("Redirecting to results page...");
-                window.location.href = `list.html?${params.toString()}`;
+                // Use /list on Render (Flask route), list.html on Live Server (localhost:5500)
+                const isLiveServer = location.port === '5500';
+                const listPath = isLiveServer ? 'list.html' : '/list';
+                console.log("Redirecting to:", listPath);
+                window.location.href = `${listPath}?${params.toString()}`;
             } catch (error) {
                 console.error('Search error:', error);
                 alert(`Error: ${error.message || error}`);
@@ -642,53 +645,55 @@
         }
 
         async function reverseGeocode(lat, lng) {
-            // Primary: Photon by Komoot — OSM-based, CORS-friendly, free, gives exact POI names
-            try {
-                const url = `https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&limit=1`;
-                const response = await fetch(url);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Photon response:', data);
-                    if (data.features && data.features.length > 0) {
-                        const p = data.features[0].properties;
-                        // Priority: specific POI name → street + district → city
-                        const name = p.name;
-                        const street = p.street;
-                        const district = p.district || p.suburb;
-                        const city = p.city || p.town || p.village;
-                        const state = p.state;
+            // Strategy: Try all 3 APIs, prefer most specific result
 
-                        // If we have a named POI (college, shop, etc.) show: Name, City, State
-                        if (name) {
-                            return [name, city || district, state].filter(Boolean).join(', ');
-                        }
-                        // Otherwise: Street, District, City, State
-                        return [street, district, city, state].filter(Boolean).join(', ');
+            // 1. Photon (Komoot) — CORS-friendly everywhere, building-level
+            try {
+                const res = await fetch(`https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}&limit=1`);
+                if (res.ok) {
+                    const d = await res.json();
+                    if (d.features && d.features.length > 0) {
+                        const p = d.features[0].properties;
+                        const name = p.name;
+                        const city = p.city || p.town || p.village;
+                        const area = p.district || p.suburb || p.county;
+                        const state = p.state;
+                        if (name) return [name, city || area, state].filter(Boolean).join(', ');
+                        return [p.street, area, city, state].filter(Boolean).join(', ');
                     }
                 }
-            } catch (e) {
-                console.warn('Photon failed, trying BigDataCloud...', e.message);
-            }
+            } catch (e) { console.warn('Photon failed:', e.message); }
 
-            // Fallback: BigDataCloud — free, no rate limits, city-level only
+            // 2. Nominatim — works perfectly on Render, may be blocked on localhost
             try {
-                const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
-                const response = await fetch(url);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('BigDataCloud response:', data);
-                    const parts = [
-                        data.city || data.locality,
-                        data.principalSubdivision,
-                        data.countryName
-                    ].filter(Boolean);
-                    if (parts.length > 0) return parts.join(', ');
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                    { headers: { 'User-Agent': 'TouristSpotFinder/1.0' } }
+                );
+                if (res.ok) {
+                    const d = await res.json();
+                    if (!d.error && d.address) {
+                        const a = d.address;
+                        const place = a.amenity || a.building || a.tourism || a.office || a.shop || a.leisure;
+                        const road = a.road || a.pedestrian;
+                        const area = a.suburb || a.neighbourhood || a.city_district || a.village || a.town || a.city;
+                        if (place) return [place, road, area, a.state].filter(Boolean).join(', ');
+                        return [road, area, a.city || a.town, a.state].filter(Boolean).join(', ');
+                    }
                 }
-            } catch (e) {
-                console.warn('BigDataCloud also failed:', e.message);
-            }
+            } catch (e) { console.warn('Nominatim failed (expected on localhost):', e.message); }
 
-            throw new Error('Could not determine your location name.');
+            // 3. BigDataCloud — always works, city-level fallback
+            try {
+                const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+                if (res.ok) {
+                    const d = await res.json();
+                    const parts = [d.city || d.locality, d.principalSubdivision, d.countryName].filter(Boolean);
+                    if (parts.length) return parts.join(', ');
+                }
+            } catch (e) { console.warn('BigDataCloud failed:', e.message); }
+
+            throw new Error('Could not detect your location name.');
         }
 
         // Result processing logic moved to list.html
