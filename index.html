@@ -57,6 +57,8 @@
         header p {
             color: var(--secondary-text);
             font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         /* Search Section Redesign */
@@ -340,12 +342,35 @@
         }
 
         @media (max-width: 600px) {
-            .button-group {
-                grid-template-columns: 1fr;
+            #app {
+                padding: 20px 15px;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            header p {
+                font-size: 0.95rem;
             }
 
             .search-container {
                 padding: 20px;
+                gap: 15px;
+            }
+
+            .input-group input {
+                padding: 15px 20px;
+                font-size: 1rem;
+            }
+
+            .button-group {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .btn {
+                padding: 14px 15px;
             }
         }
     </style>

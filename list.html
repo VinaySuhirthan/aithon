@@ -221,6 +221,52 @@
         .hidden {
             display: none;
         }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+
+            #app {
+                padding: 0;
+            }
+
+            header {
+                padding: 20px 0;
+                margin-bottom: 20px;
+            }
+
+            header h1 {
+                font-size: 1.6rem;
+            }
+
+            .trip-info {
+                flex-direction: column;
+                gap: 8px;
+                padding: 12px 20px;
+                border-radius: 16px;
+                width: 100%;
+                text-align: center;
+            }
+
+            .trip-info span:nth-child(2) {
+                transform: rotate(90deg);
+                font-size: 1.2rem;
+            }
+
+            .spots-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .spot-card {
+                padding: 20px;
+            }
+
+            .meta-value {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 
