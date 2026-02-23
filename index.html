@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TouristSpot Finder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4285F4;
+            --accent-color: #34A853;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #202124;
+            --secondary-text: #5f6368;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --border-radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        #app {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--secondary-text);
+            font-size: 1.1rem;
+        }
+
+        /* Search Section Redesign */
+        .search-container {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--secondary-text);
+            margin-left: 5px;
+        }
+
+        #location-input {
+            width: 100%;
+            padding: 18px 25px;
+            border: 2px solid #eef0f2;
+            border-radius: 14px;
+            font-size: 1.05rem;
+            font-family: inherit;
+            transition: all 0.3s;
+            background: #fbfcfe;
+        }
+
+        #location-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.1);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #f1f3f4;
+            color: var(--text-color);
+            border: 2px solid transparent;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            background-color: #3367d6;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e8eaed;
+            border-color: #dadce0;
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Results Section */
+        .spots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .spot-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-top: 5px solid var(--accent-color);
+        }
+
+        .spot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .spot-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.25rem;
+            color: var(--text-color);
+        }
+
+        .spot-card .address {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin-bottom: 15px;
+            height: 3em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .spot-meta {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--secondary-text);
+            font-weight: 600;
+        }
+
+        .meta-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Loader */
+        .loader-container {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Autocomplete Suggestions */
+        .suggestions-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 0 0 14px 14px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            z-index: 1001;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eef0f2;
+            border-top: none;
+            margin-top: 5px;
+        }
+
+        .suggestion-item {
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: #f1f7ff;
+            color: var(--primary-color);
+            padding-left: 25px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: auto;
+            padding-top: 40px;
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+
+            .search-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <h1>TouristSpot Finder</h1>
+            <p>Discover top 5 best tourist spots near you</p>
+        </header>
+
+        <main>
+            <div class="search-container">
+                <div class="input-group">
+                    <label for="location-input">Custom Location</label>
+                    <input type="text" id="location-input" placeholder="e.g. London, Paris, or New York"
+                        aria-label="Search location" autocomplete="off">
+                    <div id="suggestions" class="suggestions-container hidden"></div>
+                </div>
+
+                <div class="button-group">
+                    <button id="location-btn" class="btn btn-secondary" title="Use current location">
+                        <span>📍</span> Current Location
+                    </button>
+                    <button id="search-btn" class="btn btn-primary">
+                        Find Tourist Spots
+                    </button>
+                </div>
+            </div>
+
+            <div id="loader" class="loader-container hidden">
+                <div class="loader"></div>
+                <p>Finding the best spots for you...</p>
+            </div>
+
+            <div id="results-section" class="results-section">
+                <div id="spots-list" class="spots-grid">
+                    <!-- Cards will be injected here -->
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 TouristSpot Finder. Data &copy; <a href="https://www.openstreetmap.org/copyright"
+                    target="_blank">OpenStreetMap</a> contributors.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchBtn = document.getElementById('search-btn');
+            const locationInput = document.getElementById('location-input');
+
+            searchBtn.addEventListener('click', performManualSearch);
+            locationInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performManualSearch();
+            });
+
+            // Autocomplete Logic
+            let debounceTimer;
+            locationInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const input = locationInput.value.trim();
+                if (input.length < 2) {
+                    hideSuggestions();
+                    return;
+                }
+                debounceTimer = setTimeout(() => fetchSuggestions(input), 300);
+            });
+
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.input-wrapper')) {
+                    hideSuggestions();
+                }
+            });
+
+            const locationBtn = document.getElementById('location-btn');
+            locationBtn.addEventListener('click', performLiveSearch);
+        });
+
+        async function performManualSearch() {
+            const location = document.getElementById('location-input').value.trim();
+            if (!location) {
+                alert("Please enter a location.");
+                return;
+            }
+
+            hideSuggestions();
+            try {
+                showLoader("Finding coordinates...");
+                const coords = await getCoordinates(location);
+                await processSearch(coords.lat, coords.lng, "Searching near " + location + "...");
+            } catch (error) {
+                console.error('Search error:', error);
+                alert(`Error: ${error.message || error}`);
+            } finally {
+                hideLoader();
+            }
+        }
+
+        async function performLiveSearch() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+
+            hideSuggestions();
+            showLoader("Detecting your location address...");
+
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                try {
+                    // Reverse geocode to update the input box with real address
+                    const address = await reverseGeocode(lat, lng);
+                    document.getElementById('location-input').value = address;
+
+                    // Do NOT search automatically as requested. 
+                    // Let the user click "Find Tourist Spots"
+                } catch (error) {
+                    console.error('Live address detection error:', error);
+                    alert("Located your coordinates, but couldn't detect the address name.");
+                } finally {
+                    hideLoader();
+                }
+            }, (error) => {
+                console.error('Geolocation error:', error);
+                let msg = "Unable to retrieve your location.";
+                if (error.code === error.TIMEOUT) msg = "Location detection timed out. Please try again or type manually.";
+                if (error.code === error.PERMISSION_DENIED) msg = "Please enable location permissions in your browser.";
+                alert(msg);
+                hideLoader();
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000, // 10 second timeout to prevent infinite loading
+                maximumAge: 0
+            });
+        }
+
+        async function processSearch(lat, lng, statusText) {
+            try {
+                const spotsList = document.getElementById('spots-list');
+                spotsList.innerHTML = '';
+
+                showLoader(statusText || "Searching for tourist spots...");
+                const spots = await getNearbyTouristSpots(lat, lng);
+
+                if (spots.length === 0) {
+                    renderSpots([]);
+                    return;
+                }
+
+                showLoader("Calculating distances...");
+                const topSpots = await getDistanceMatrix(lat, lng, spots);
+                renderSpots(topSpots);
+            } catch (error) {
+                console.error('Process search error:', error);
+                // Optionally alert here, but callers often handle alerts too
+            } finally {
+                hideLoader();
+            }
+        }
+
+        function showLoader(text) {
+            const loader = document.getElementById('loader');
+            const loaderText = loader.querySelector('p');
+            loaderText.textContent = text;
+            loader.classList.remove('hidden');
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        async function fetchSuggestions(input) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&addressdetails=1&limit=5`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const suggestions = data.map(item => ({
+                    description: item.display_name,
+                    lat: item.lat,
+                    lon: item.lon
+                }));
+                renderSuggestions(suggestions);
+            } catch (error) {
+                console.error('Autocomplete error:', error);
+            }
+        }
+
+        function renderSuggestions(suggestions) {
+            const container = document.getElementById('suggestions');
+            container.innerHTML = '';
+
+            if (suggestions.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            suggestions.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = item.description;
+                div.onclick = async () => {
+                    document.getElementById('location-input').value = item.description;
+                    hideSuggestions();
+
+                    try {
+                        await processSearch(parseFloat(item.lat), parseFloat(item.lon), "Searching near " + item.description + "...");
+                    } catch (error) {
+                        console.error('Suggestion jump error:', error);
+                        performManualSearch(); // Fallback if specific search fails
+                    }
+                };
+                container.appendChild(div);
+            });
+
+            container.classList.remove('hidden');
+        }
+
+        function hideSuggestions() {
+            const suggestions = document.getElementById('suggestions');
+            if (suggestions) suggestions.classList.add('hidden');
+        }
+
+        async function getCoordinates(address) {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data && data.length > 0) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            }
+            throw new Error("Location not found.");
+        }
+
+        async function reverseGeocode(lat, lng) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.display_name || `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            } catch (e) {
+                return `Location at ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            }
+        }
+
+        async function getNearbyTouristSpots(lat, lng) {
+            // Expanded query to include more tourism, historic, industrial, and craft tags
+            const query = `[out:json];
+                (
+                  node["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"](around:10000,${lat},${lng});
+                  node["historic"~"monument|memorial|castle|ruins"](around:10000,${lat},${lng});
+                  node["industrial"~"factory|mine"](around:10000,${lat},${lng});
+                  node["craft"~"tea|coffee|honey"](around:10000,${lat},${lng});
+                  way["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"](around:10000,${lat},${lng});
+                  way["historic"~"monument|memorial|castle|ruins"](around:10000,${lat},${lng});
+                  way["industrial"~"factory|mine"](around:10000,${lat},${lng});
+                  way["craft"~"tea|coffee|honey"](around:10000,${lat},${lng});
+                );
+                out center 20;`;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data && data.elements) {
+                    return data.elements.map(element => {
+                        const tags = element.tags || {};
+                        const typeName = tags.tourism || tags.historic || tags.industrial || tags.craft || "Tourist Spot";
+                        const formattedType = typeName.charAt(0).toUpperCase() + typeName.slice(1).replace(/_/g, ' ');
+
+                        // Advanced name detection: combine brand, operator and name for specificity
+                        const brand = tags.brand || tags.operator || "";
+                        let finalName = tags.name || "";
+
+                        if (!finalName) {
+                            finalName = brand ? `${brand} ${formattedType}` : formattedType;
+                        } else if (brand && !finalName.toLowerCase().includes(brand.toLowerCase())) {
+                            finalName = `${brand} - ${finalName}`;
+                        }
+
+                        const sLat = element.center ? element.center.lat : element.lat;
+                        const sLng = element.center ? element.center.lon : element.lon;
+
+                        // Rough Euclidean distance for fallback sorting
+                        const roughDist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2));
+
+                        return {
+                            name: finalName,
+                            address: tags["addr:street"] ? `${tags["addr:street"]} ${tags["addr:housenumber"] || ""}` : "Location in OSM",
+                            lat: sLat,
+                            lng: sLng,
+                            distance_text: "Checking...",
+                            duration_text: "Checking...",
+                            distance_value: roughDist * 111320
+                        };
+                    });
+                }
+            } catch (error) {
+                console.error('Overpass error:', error);
+            }
+            return [];
+        }
+
+        async function getDistanceMatrix(originLat, originLng, spots) {
+            if (!spots.length) return [];
+
+            const coords = `${originLng},${originLat};` + spots.map(s => `${s.lng},${s.lat}`).join(';');
+            const url = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=duration,distance`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.code === 'Ok') {
+                    const distances = data.distances ? data.distances[0] : null;
+                    const durations = data.durations ? data.durations[0] : null;
+
+                    spots.forEach((spot, i) => {
+                        const distMeters = distances ? distances[i + 1] : null;
+                        const durSeconds = durations ? durations[i + 1] : null;
+
+                        if (distMeters !== null && distMeters !== undefined) {
+                            spot.distance_value = distMeters;
+                            spot.distance_text = `${(distMeters / 1000).toFixed(1)} km`;
+                        }
+                        if (durSeconds !== null && durSeconds !== undefined) {
+                            spot.duration_text = `${Math.round(durSeconds / 60)} min`;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('OSRM fetch error:', error);
+            }
+
+            // Always sort by distance_value (either OSRM precise or rough degrees fallback)
+            return spots.sort((a, b) => a.distance_value - b.distance_value).slice(0, 5);
+        }
+
+        function renderSpots(spots) {
+            const spotsList = document.getElementById('spots-list');
+            spotsList.innerHTML = '';
+
+            if (!spots || spots.length === 0) {
+                spotsList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #70757a;">No tourist spots found in this area. Try another location!</p>';
+                return;
+            }
+
+            spots.forEach(spot => {
+                const card = document.createElement('div');
+                card.className = 'spot-card';
+                card.innerHTML = `
+                    <h3>${spot.name}</h3>
+                    <p class="address">${spot.address}</p>
+                    <div class="spot-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Distance</span>
+                            <span class="meta-value">${spot.distance_text}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Travel Time</span>
+                            <span class="meta-value">${spot.duration_text}</span>
+                        </div>
+                    </div>
+                `;
+                spotsList.appendChild(card);
+            });
+        }
+    </script>
+</body>
+
+</html>
