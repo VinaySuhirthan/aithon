@@ -183,6 +183,22 @@
             width: fit-content;
         }
 
+        /* Rainbow Bar Styles */
+        .crowd-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .crowd-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease, background-color 0.5s ease;
+            width: 0%;
+        }
+
         .crowd-low {
             background: #e8f5e9;
             color: #2e7d32;
@@ -716,6 +732,15 @@
             return spots.sort((a, b) => a.distance_value - b.distance_value).slice(0, 5);
         }
 
+        function getCrowdColor(count) {
+            // VIBGYOR-inspired scale: Green (low) -> Yellow -> Orange -> Red (high)
+            if (count < 20) return "#4caf50"; // Green
+            if (count < 40) return "#8bc34a"; // Light Green
+            if (count < 60) return "#ffeb3b"; // Yellow
+            if (count < 80) return "#ff9800"; // Orange
+            return "#f44336"; // Red
+        }
+
         function renderSpots(spots) {
             const spotsList = document.getElementById('spots-list');
             spotsList.innerHTML = '';
@@ -729,16 +754,26 @@
                 const card = document.createElement('div');
                 card.className = 'spot-card';
 
-                // Display crowd level if available
+                // Display crowd level and indicator if available
                 let crowdHtml = '';
                 if (spot.crowd === undefined || spot.crowd === null) {
                     crowdHtml = `<div class="crowd-badge crowd-unknown">👥 Crowd: Not Determined</div>`;
                 } else {
+                    const barWidth = Math.min(spot.crowd, 100);
+                    const barColor = getCrowdColor(spot.crowd);
+
                     let levelClass = 'crowd-low';
                     if (spot.crowd > 60) levelClass = 'crowd-high';
                     else if (spot.crowd > 30) levelClass = 'crowd-mod';
 
-                    crowdHtml = `<div class="crowd-badge ${levelClass}">👥 Crowd Level: ${spot.crowd} People</div>`;
+                    crowdHtml = `
+                        <div class="crowd-visual">
+                            <div class="crowd-bar-container">
+                                <div class="crowd-bar-fill" style="width: ${barWidth}%; background-color: ${barColor};"></div>
+                            </div>
+                            <div class="crowd-badge ${levelClass}" style="margin-top: 8px;">👥 Crowd Level: ${spot.crowd} People</div>
+                        </div>
+                    `;
                 }
 
                 card.innerHTML = `
