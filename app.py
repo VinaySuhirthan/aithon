@@ -31,7 +31,7 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # ─── YOLO setup ───────────────────────────────────────────────────────────────
-model = YOLO('yolov8m.pt')  # Upgraded to Medium for better accuracy
+model = YOLO('yolov8n.pt')  # Switched to Nano for Render (fixes 512MB RAM limit)
 
 UPDATE_INTERVAL = 5  # seconds
 
