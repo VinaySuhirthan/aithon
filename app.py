@@ -8,6 +8,7 @@ def index():
     return send_from_directory('.', 'index.html')
 
 @app.route('/list')
+@app.route('/list.html')
 def list_page():
     return send_from_directory('.', 'list.html')
 

@@ -379,7 +379,7 @@
         }
 
         async function getNearbyTouristSpots(lat, lng) {
-            const query = `[out:json];
+            const query = `[out:json][timeout:25];
                 (
                   node["tourism"~"attraction|museum|viewpoint|artwork|zoo|theme_park|gallery|aquarium"]["name"](around:10000,${lat},${lng});
                   node["historic"~"monument|memorial|castle|ruins"]["name"](around:10000,${lat},${lng});
@@ -388,62 +388,88 @@
                   way["historic"~"monument|memorial|castle|ruins"]["name"](around:10000,${lat},${lng});
                 );
                 out center 30;`;
-            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data && data.elements) {
-                    // Filter: must have a real name, not a generic OSM placeholder
-                    const junkName = /^(point\s*#?\d+|node\s*\d+|way\s*\d+|unnamed|noname|\d+)$/i;
-                    const spots = data.elements
-                        .filter(el => {
-                            if (!el.tags || !el.tags.name) return false;
-                            const n = el.tags.name.trim();
-                            if (n.length < 3) return false;
-                            if (junkName.test(n)) return false;  // Reject "Point #10", "Point 5" etc.
-                            return true;
-                        })
-                        .map(el => {
-                            const t = el.tags;
-                            const sLat = el.center ? el.center.lat : el.lat;
-                            const sLng = el.center ? el.center.lon : el.lon;
-                            const dist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2)) * 111320;
-                            return {
-                                name: t.name,
-                                lat: sLat,
-                                lng: sLng,
-                                address: t["addr:street"] || t["addr:city"] || t.tourism || t.historic || "See on map",
-                                distance_value: dist
-                            };
-                        })
-                        .sort((a, b) => a.distance_value - b.distance_value);
 
-                    // Deduplicate: skip spots within 200m OR with very similar names (same landmark, different OSM nodes)
-                    const normalize = n => n.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    const isSimilarName = (a, b) => {
-                        const na = normalize(a), nb = normalize(b);
-                        if (na === nb) return true;
-                        // Check if one name's first significant word appears in the other
-                        const firstWord = s => s.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
-                        const wa = firstWord(a), wb = firstWord(b);
-                        if (wa.length > 3 && nb.includes(wa)) return true;
-                        if (wb.length > 3 && na.includes(wb)) return true;
-                        return false;
-                    };
+            const mirrors = [
+                'https://overpass-api.de/api/interpreter',
+                'https://overpass.kumi.systems/api/interpreter',
+                'https://overpass.osm.ch/api/interpreter',
+                'https://lz4.overpass-api.de/api/interpreter'
+            ];
 
-                    const unique = [];
-                    for (const s of spots) {
-                        const isDuplicate = unique.some(u => {
-                            const dLat = (s.lat - u.lat) * 111320;
-                            const dLng = (s.lng - u.lng) * 111320 * Math.cos(s.lat * Math.PI / 180);
-                            const distM = Math.sqrt(dLat * dLat + dLng * dLng);
-                            return distM < 200 || isSimilarName(s.name, u.name);
-                        });
-                        if (!isDuplicate) unique.push(s);
+            for (const baseUrl of mirrors) {
+                const url = `${baseUrl}?data=${encodeURIComponent(query)}`;
+                try {
+                    console.log(`Trying Overpass mirror: ${baseUrl}`);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout per mirror
+
+                    const response = await fetch(url, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        console.warn(`Mirror ${baseUrl} returned ${response.status}`);
+                        continue;
                     }
-                    return unique;
+
+                    const data = await response.json();
+                    if (data && data.elements && data.elements.length > 0) {
+                        // Success! Process data
+                        // Filter: must have a real name, not a generic OSM placeholder
+                        const junkName = /^(point\s*#?\d+|node\s*\d+|way\s*\d+|unnamed|noname|\d+)$/i;
+                        const spots = data.elements
+                            .filter(el => {
+                                if (!el.tags || !el.tags.name) return false;
+                                const n = el.tags.name.trim();
+                                if (n.length < 3) return false;
+                                if (junkName.test(n)) return false;
+                                return true;
+                            })
+                            .map(el => {
+                                const t = el.tags;
+                                const sLat = el.center ? el.center.lat : el.lat;
+                                const sLng = el.center ? el.center.lon : el.lon;
+                                const dist = Math.sqrt(Math.pow(sLat - lat, 2) + Math.pow(sLng - lng, 2)) * 111320;
+                                return {
+                                    name: t.name,
+                                    lat: sLat,
+                                    lng: sLng,
+                                    address: t["addr:street"] || t["addr:city"] || t.tourism || t.historic || "See on map",
+                                    distance_value: dist
+                                };
+                            })
+                            .sort((a, b) => a.distance_value - b.distance_value);
+
+                        // Deduplicate logic
+                        const normalize = n => n.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        const isSimilarName = (a, b) => {
+                            const na = normalize(a), nb = normalize(b);
+                            if (na === nb) return true;
+                            const firstWord = s => s.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
+                            const wa = firstWord(a), wb = firstWord(b);
+                            if (wa.length > 3 && nb.includes(wa)) return true;
+                            if (wb.length > 3 && na.includes(wb)) return true;
+                            return false;
+                        };
+
+                        const unique = [];
+                        for (const s of spots) {
+                            const isDuplicate = unique.some(u => {
+                                const dLat = (s.lat - u.lat) * 111320;
+                                const dLng = (s.lng - u.lng) * 111320 * Math.cos(s.lat * Math.PI / 180);
+                                const distM = Math.sqrt(dLat * dLat + dLng * dLng);
+                                return distM < 200 || isSimilarName(s.name, u.name);
+                            });
+                            if (!isDuplicate) unique.push(s);
+                        }
+                        return unique;
+                    }
+                } catch (e) {
+                    console.warn(`Error with mirror ${baseUrl}:`, e.message);
                 }
-            } catch (e) { console.error('Overpass error:', e); } return [];
+            }
+
+            console.error('All Overpass mirrors failed or returned no data.');
+            return [];
         }
 
         async function getTravelData(oLat, oLng, spots) {
