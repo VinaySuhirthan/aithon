@@ -574,16 +574,9 @@
                 const div = document.createElement('div');
                 div.className = 'suggestion-item';
                 div.textContent = item.description;
-                div.onclick = async () => {
+                div.onclick = () => {
                     document.getElementById('location-input').value = item.description;
                     hideSuggestions();
-
-                    try {
-                        await processSearch(parseFloat(item.lat), parseFloat(item.lon), "Searching near " + item.description + "...");
-                    } catch (error) {
-                        console.error('Suggestion jump error:', error);
-                        performManualSearch(); // Fallback if specific search fails
-                    }
                 };
                 container.appendChild(div);
             });
