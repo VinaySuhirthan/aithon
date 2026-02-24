@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
+
 from ultralytics import YOLO
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -297,15 +298,15 @@ UPDATE_INTERVAL = 10  # Increased to save database/CPU
 # Video sources configuration
 VIDEO_SOURCES = [
     {"path": "Wax Museum.mp4", "spot": "Wax Museum", "capacity": 200},
-    {"path": "Deer Park.mp4", "spot": "Deer Park", "capacity": 100},
+    {"path": "Deer Park.mp4", "spot": "Deer Park", "capacity": 100}
 ]
 
 def count_people_in_frame(frame):
     # Use global lock to prevent concurrent inference
     with inference_lock:
         try:
-            # Standard image size for consistent results
-            results = model(frame, conf=0.25, imgsz=640, verbose=False)
+            # Use smaller imgsz=320 to stay within RAM limits
+            results = model(frame, conf=0.25, imgsz=320, verbose=False)
             person_count = 0
             for result in results:
                 for box in result.boxes:
@@ -364,7 +365,6 @@ def process_video(video_path, spot_name, capacity):
                 if frame_count % 15 == 0:
                     try:
                         # Resize frame IMMEDIATELY to reduce memory footprint
-                        # Using 640 as max dimension for YOLO
                         h, w = frame.shape[:2]
                         if w > 640:
                             scale = 640 / w
