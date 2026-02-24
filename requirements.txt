@@ -4,5 +4,7 @@ python-dotenv==1.0.1
 ultralytics>=8.2.0
 opencv-python-headless
 supabase>=2.0.0
+pandas
+scikit-learn
 torch --index-url https://download.pytorch.org/whl/cpu
 torchvision --index-url https://download.pytorch.org/whl/cpu

@@ -1,0 +1,63 @@
+--- Supabase Data (crowd_data) ---
+[
+  {
+    "spot_name": "Deer Park",
+    "city_name": "Ooty",
+    "crowd_level": 28,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Rose Garden",
+    "city_name": "Ooty",
+    "crowd_level": 24,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Sims Park",
+    "city_name": "Ooty",
+    "crowd_level": 6,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Tribal Research Centre Museum",
+    "city_name": "Ooty",
+    "crowd_level": 40,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Coakers Walk",
+    "city_name": "Kodaikanal",
+    "crowd_level": 33,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Bryant Park",
+    "city_name": "Kodaikanal",
+    "crowd_level": 14,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Kodaikanal Lake",
+    "city_name": "Kodaikanal",
+    "crowd_level": 9,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Pillar Rocks",
+    "city_name": "Kodaikanal",
+    "crowd_level": 50,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Silver Cascade Falls",
+    "city_name": "Kodaikanal",
+    "crowd_level": 38,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  },
+  {
+    "spot_name": "Wax Museum",
+    "city_name": "Ooty",
+    "crowd_level": 4,
+    "last_updated": "2026-02-23T20:10:30.728884+00:00"
+  }
+]

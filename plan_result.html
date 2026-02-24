@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Trip Plan - TouristSpot Finder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f86f7;
+            --primary-dark: #3a6cd9;
+            --primary-light: rgba(79, 134, 247, 0.08);
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --text-primary: #1a1d26;
+            --text-secondary: #5c6370;
+            --text-tertiary: #9ba3b0;
+            --border: #e8ecf2;
+            --border-light: #f0f2f6;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --radius-md: 14px;
+            --radius-xl: 20px;
+            --green: #059669;
+            --green-bg: #ecfdf5;
+            --amber: #d97706;
+            --amber-bg: #fffbeb;
+            --red: #dc2626;
+            --red-bg: #fef2f2;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            color: var(--text-primary);
+            padding: 0;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px 16px 60px;
+        }
+
+        /* ─── BACK BUTTON ──────────────────────────────── */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 8px 0;
+            margin-bottom: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .back-btn:active {
+            opacity: 0.6;
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ─── HEADER ─────────────────────────────────── */
+        .plan-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .logo-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 12px;
+        }
+
+        .plan-header h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .plan-header h1 .city-name {
+            color: var(--primary);
+        }
+
+        .plan-meta {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .meta-chip svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--primary);
+        }
+
+        /* ─── TIMELINE ─────────────────────────────── */
+        .timeline {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 24px;
+            top: 35px;
+            bottom: 35px;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--primary), rgba(79, 134, 247, 0.15));
+            z-index: 0;
+        }
+
+        /* ─── SCHEDULE CARD ──────────────────────────── */
+        .schedule-card {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 14px 0;
+            position: relative;
+            z-index: 1;
+            animation: cardSlide 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes cardSlide {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .schedule-card:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .schedule-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .schedule-card:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .schedule-card:nth-child(4) {
+            animation-delay: 0.35s;
+        }
+
+        .schedule-card:nth-child(5) {
+            animation-delay: 0.4s;
+        }
+
+        .schedule-card:nth-child(6) {
+            animation-delay: 0.45s;
+        }
+
+        .time-marker {
+            flex-shrink: 0;
+            width: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .time-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid var(--bg);
+            box-shadow: 0 0 0 2px var(--primary);
+            position: relative;
+            z-index: 2;
+        }
+
+        .time-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+            margin-top: 4px;
+            line-height: 1.1;
+        }
+
+        .card-body {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .card-body:active {
+            box-shadow: var(--shadow-md);
+            transform: scale(0.99);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .spot-name {
+            font-size: 1.05rem;
+            font-weight: 750;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+        }
+
+        .stop-number {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .crowd-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            flex-shrink: 0;
+        }
+
+        .crowd-low {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+
+        .crowd-moderate {
+            background: var(--amber-bg);
+            color: var(--amber);
+        }
+
+        .crowd-high {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+        .card-stats {
+            display: flex;
+            gap: 12px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .stat {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 750;
+            color: var(--primary);
+            letter-spacing: -0.02em;
+        }
+
+        .stat-value.visitors {
+            color: var(--text-primary);
+        }
+
+        /* ─── SUMMARY BAR ─────────────────────────── */
+        .summary-bar {
+            margin-top: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            animation: cardSlide 0.5s ease 0.6s forwards;
+            opacity: 0;
+        }
+
+        .summary-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+        }
+
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .summary-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .summary-stat .val {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .summary-stat .label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ─── NAVIGATE BUTTON ────────────────────────── */
+        .navigate-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px 24px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #34a853 0%, #2d8f47 100%);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(52, 168, 83, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: cardSlide 0.5s ease 0.7s forwards;
+            opacity: 0;
+            text-decoration: none;
+        }
+
+        .navigate-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(52, 168, 83, 0.4);
+        }
+
+        .navigate-btn:active {
+            transform: scale(0.98);
+        }
+
+        .navigate-btn svg {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .navigate-btn .sub {
+            font-size: 0.75rem;
+            font-weight: 500;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        /* ─── LOCKED BADGE ──────────────────────────── */
+        .locked-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 2px 8px;
+            border-radius: 100px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        /* ─── EMPTY STATE ────────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+        }
+
+        .empty-state a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        /* ─── FOOTER ─────────────────────────────────── */
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px 0;
+            color: var(--text-tertiary);
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        footer strong {
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="index.html" class="back-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back
+        </a>
+
+        <div class="plan-header" id="header">
+            <div class="logo-mark">
+                <img src="logo.png" alt="TouristSpot Finder Logo"
+                    style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+            </div>
+            <h1>Your <span class="city-name" id="city-name">City</span> Plan</h1>
+            <div class="plan-meta" id="plan-meta"></div>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <!-- Cards injected by JS -->
+        </div>
+
+        <div class="summary-bar" id="summary-bar" style="display: none;">
+            <div class="summary-title">Trip Summary</div>
+            <div class="summary-stats" id="summary-stats"></div>
+        </div>
+
+        <button class="navigate-btn" id="navigate-btn" style="display: none;" onclick="navigateWithMaps()">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="white"
+                    opacity="0.9" />
+                <circle cx="12" cy="9" r="2.5" fill="#34a853" />
+            </svg>
+            <div>
+                Navigate with Google Maps
+                <div class="sub" id="nav-sub">Current Location → All Stops</div>
+            </div>
+        </button>
+
+        <div id="empty-view" class="empty-state" style="display: none;">
+            <p>No trip data found.</p>
+            <a href="index.html">← Go back and create a plan</a>
+        </div>
+
+        <footer>
+            <p><strong>Team HacksON</strong> — IMPACT AI-THON</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const planData = localStorage.getItem('trip_plan');
+            if (!planData) {
+                document.getElementById('empty-view').style.display = 'block';
+                document.getElementById('header').style.display = 'none';
+                document.getElementById('summary-bar').style.display = 'none';
+                return;
+            }
+
+            const data = JSON.parse(planData);
+            const timeline = document.getElementById('timeline');
+            const durationHrs = parseInt(data.duration) || 3;
+            const spotsCount = data.itinerary.length;
+
+            // ─── HEADER ──────────────────────────────
+            document.getElementById('city-name').textContent = data.city;
+
+            const dateStr = new Date(data.date).toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric'
+            });
+
+            const metaContainer = document.getElementById('plan-meta');
+            metaContainer.innerHTML = `
+                <div class="meta-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    ${dateStr}
+                </div>
+                <div class="meta-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    ${durationHrs} Hours
+                </div>
+                <div class="meta-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    ${spotsCount} Spots
+                </div>
+            `;
+
+            // ─── CALCULATE TIME SLOTS ──────────────────
+            const startHour = 9; // Assume 9 AM start
+            const minutesPerSpot = (durationHrs * 60) / spotsCount;
+
+            function formatTime(totalMinutes) {
+                let h = Math.floor(totalMinutes / 60);
+                const m = Math.round(totalMinutes % 60);
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                if (h > 12) h -= 12;
+                if (h === 0) h = 12;
+                return m === 0 ? `${h} ${ampm}` : `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+            }
+
+            // ─── RENDER CARDS ──────────────────────────
+            let totalVisitors = 0;
+
+            data.itinerary.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'schedule-card';
+
+                const startMin = startHour * 60 + (index * minutesPerSpot);
+                const endMin = startMin + minutesPerSpot;
+                const timeStr = formatTime(startMin);
+                const endStr = formatTime(endMin);
+
+                const statusClass = item.status.toLowerCase();
+                const isLocked = data.locked_spot && item.spot === data.locked_spot;
+
+                totalVisitors += item.prediction || 0;
+
+                card.innerHTML = `
+                    <div class="time-marker">
+                        <div class="time-dot"></div>
+                        <div class="time-label">${timeStr}</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-top">
+                            <div>
+                                <div class="stop-number">Stop #${index + 1}</div>
+                                <div class="spot-name">
+                                    ${item.spot}
+                                    ${isLocked ? '<span class="locked-badge">★ Your Pick</span>' : ''}
+                                </div>
+                            </div>
+                            <div class="crowd-badge crowd-${statusClass}">
+                                ${item.status}
+                            </div>
+                        </div>
+                        <div class="card-stats">
+                            <div class="stat">
+                                <div class="stat-label">Predicted Visitors</div>
+                                <div class="stat-value visitors">${item.prediction.toLocaleString()}</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Time Slot</div>
+                                <div class="stat-value">${timeStr} – ${endStr}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                timeline.appendChild(card);
+            });
+
+            // ─── SUMMARY BAR ─────────────────────────
+            const summaryBar = document.getElementById('summary-bar');
+            summaryBar.style.display = 'block';
+
+            const avgVisitors = spotsCount > 0 ? Math.round(totalVisitors / spotsCount) : 0;
+            const bestSpot = data.itinerary.reduce((min, s) => s.prediction < min.prediction ? s : min, data.itinerary[0]);
+
+            // Show navigate button
+            document.getElementById('navigate-btn').style.display = 'flex';
+            const spotNames = data.itinerary.map(i => i.spot);
+            document.getElementById('nav-sub').textContent = `Your Location → ${spotNames.join(' → ')}`;
+
+            // Store spot names globally for navigation
+            window._tripSpots = spotNames;
+            window._tripCity = data.city;
+
+            document.getElementById('summary-stats').innerHTML = `
+                <div class="summary-stat">
+                    <div class="val">${spotsCount}</div>
+                    <div class="label">Stops</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="val">${durationHrs}h</div>
+                    <div class="label">Duration</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="val">${avgVisitors}</div>
+                    <div class="label">Avg Crowd</div>
+                </div>
+            `;
+        });
+
+        function navigateWithMaps() {
+            const spots = window._tripSpots;
+            const city = window._tripCity;
+            if (!spots || spots.length === 0) return;
+
+            // Append city name for better geocoding
+            const spotsWithCity = spots.map(s => `${s}, ${city}`);
+
+            // Build Google Maps multi-stop URL
+            // Format: https://www.google.com/maps/dir/ORIGIN/STOP1/STOP2/.../DESTINATION
+            function openMaps(originStr) {
+                const destination = encodeURIComponent(spotsWithCity[spotsWithCity.length - 1]);
+                let waypoints = '';
+                if (spotsWithCity.length > 1) {
+                    waypoints = spotsWithCity.slice(0, -1).map(s => encodeURIComponent(s)).join('/');
+                }
+
+                let url;
+                if (waypoints) {
+                    url = `https://www.google.com/maps/dir/${encodeURIComponent(originStr)}/${waypoints}/${destination}`;
+                } else {
+                    url = `https://www.google.com/maps/dir/${encodeURIComponent(originStr)}/${destination}`;
+                }
+                window.open(url, '_blank');
+            }
+
+            // Try to get current location
+            if (navigator.geolocation) {
+                const btn = document.getElementById('navigate-btn');
+                btn.style.opacity = '0.7';
+                btn.querySelector('div').firstChild.textContent = 'Getting location...';
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        openMaps(`${lat},${lng}`);
+                        btn.style.opacity = '1';
+                        btn.querySelector('div').firstChild.textContent = 'Navigate with Google Maps';
+                    },
+                    (error) => {
+                        console.warn('Geolocation failed, using My Location:', error);
+                        openMaps('My Location');
+                        btn.style.opacity = '1';
+                        btn.querySelector('div').firstChild.textContent = 'Navigate with Google Maps';
+                    },
+                    { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+                );
+            } else {
+                openMaps('My Location');
+            }
+        }
+    </script>
+</body>
+
+</html>
